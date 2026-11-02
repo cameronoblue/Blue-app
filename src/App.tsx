@@ -14,7 +14,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 
 const navigation = [
-  { to: '/', label: 'Dashboard', short: 'Home', icon: LayoutGrid },
+  { to: '/apps', label: 'Dashboard', short: 'Home', icon: LayoutGrid },
   { to: '/log', label: 'Log app', short: 'Log', icon: ListPlus },
   { to: '/settings', label: 'Settings', short: 'Settings', icon: Settings2 },
 ]
@@ -34,27 +34,27 @@ function Shell() {
   const active = navigation.find(n => n.to === location.pathname || (n.to !== '/' && location.pathname.startsWith(`${n.to}/`)))
   return <div className="app-shell">
     <aside className="desktop-sidebar">
-      <Brand />
+      <Brand to="/apps" />
       <p className="mb-3 mt-12 px-3 text-[10px] font-semibold tracking-[.18em] text-muted-foreground">YOUR WORKSPACE</p>
-      <nav className="space-y-1.5" aria-label="Main navigation">{navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`}><Icon size={19} />{label}</NavLink>)}</nav>
+      <nav className="space-y-1.5" aria-label="Main navigation">{navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/apps'} className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`}><Icon size={19} />{label}</NavLink>)}</nav>
       <div className="mt-auto rounded-2xl border border-dashed p-4"><Sparkles size={19} className="mb-3 text-primary" /><p className="text-sm font-medium">A little more you.</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Your apps. Your tools.<br />Room for what comes next.</p></div>
       <div className="mt-5 flex items-center gap-3 border-t pt-5"><div className="avatar">{me.username.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{me.username}</p><p className="text-xs capitalize text-muted-foreground">{me.role}</p></div><Button variant="ghost" size="icon" aria-label="Sign out" onClick={() => void signOut().catch(() => toast.error('Could not sign out.'))}><LogOut size={17} /></Button></div>
     </aside>
     <div className="min-w-0 flex-1">
-      <header className="app-header"><div className="md:hidden"><Brand /></div><div className="hidden text-sm text-muted-foreground md:block">Workspace <span className="mx-3 text-border">/</span><span className="text-foreground">{active?.label ?? 'Blue app'}</span></div><div className="flex items-center gap-3"><span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex"><span className="size-1.5 rounded-full bg-emerald-500" />Personal workspace</span><Link to="/settings" className="avatar size-9 text-xs" aria-label="Account settings">{me.username.slice(0, 2).toUpperCase()}</Link></div></header>
+      <header className="app-header"><div className="md:hidden"><Brand to="/apps" /></div><div className="hidden text-sm text-muted-foreground md:block">Workspace <span className="mx-3 text-border">/</span><span className="text-foreground">{active?.label ?? 'Blue app'}</span></div><div className="flex items-center gap-3"><span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex"><span className="size-1.5 rounded-full bg-emerald-500" />Personal workspace</span><Link to="/settings" className="avatar size-9 text-xs" aria-label="Account settings">{me.username.slice(0, 2).toUpperCase()}</Link></div></header>
       <main className="main-content"><Outlet /></main>
     </div>
-    <nav className="mobile-nav" aria-label="Mobile navigation">{navigation.map(({ to, short, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `mobile-link ${isActive ? 'active' : ''}`}><Icon size={21} strokeWidth={1.8} /><span>{short}</span></NavLink>)}</nav>
+    <nav className="mobile-nav" aria-label="Mobile navigation">{navigation.map(({ to, short, icon: Icon }) => <NavLink key={to} to={to} end={to === '/apps'} className={({ isActive }) => `mobile-link ${isActive ? 'active' : ''}`}><Icon size={21} strokeWidth={1.8} /><span>{short}</span></NavLink>)}</nav>
   </div>
 }
-function Brand() { return <Link to="/" className="flex items-center gap-2.5"><span className="brand-icon"><Layers size={21} strokeWidth={2.2} /></span><span className="text-xl font-bold tracking-tight">blue<span className="text-primary">.</span></span></Link> }
+function Brand({ to = '/' }: { to?: string }) { return <Link to={to} className="flex items-center gap-2.5"><span className="brand-icon"><Layers size={21} strokeWidth={2.2} /></span><span className="text-xl font-bold tracking-tight">blue<span className="text-primary">.</span></span></Link> }
 export function SignIn() {
   const { signIn } = useAuthActions()
   const { isAuthenticated, isLoading } = useConvexAuth()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   if (isLoading) return <Loading />
-  if (isAuthenticated) return <Navigate to="/" replace />
+  if (isAuthenticated) return <Navigate to="/apps" replace />
   return <div className="login-page"><div className="login-story"><Brand /><div className="my-auto max-w-md"><p className="eyebrow text-blue-200">A SPACE THAT GROWS WITH YOU</p><h1 className="mt-5 text-5xl leading-[1.12] font-semibold tracking-tight">Life happens.<br />Make a little<br /><span className="text-blue-200">sense of it.</span></h1><p className="mt-6 max-w-xs text-base leading-relaxed text-blue-100/80">A personal home for your everyday tools, small observations, and everything you’re curious about.</p><div className="mt-10 flex gap-3"><span className="login-mini"><ListPlus size={19} />Log the moment</span><span className="login-mini"><ChartNoAxesCombined size={19} />Find a pattern</span></div></div><p className="text-xs text-blue-100/60">A little more organized. A little more you.</p></div>
     <div className="flex min-h-svh flex-col justify-center p-6 sm:p-12"><div className="mx-auto w-full max-w-sm"><div className="mb-16 md:hidden"><Brand /></div><Badge variant="secondary" className="mb-5 gap-1.5"><ShieldCheck size={13} />Your personal workspace</Badge><h2 className="text-3xl font-semibold tracking-tight">Welcome back.</h2><p className="mt-3 mb-9 text-sm text-muted-foreground">Sign in to pick up where you left off.</p>
     <form className="space-y-5" onSubmit={async e => { e.preventDefault(); if (pending) return; setPending(true); setError(''); const data = new FormData(e.currentTarget); try { await signIn('password', { username: String(data.get('username')), password: String(data.get('password')), flow: 'signIn' }) } catch { setError('The username or password is incorrect. Please try again.') } finally { setPending(false) } }}>
@@ -79,4 +79,4 @@ export function RouteError() {
   useRouteError()
   return <div className="mx-auto max-w-md p-8"><h1 className="page-title">Something went wrong.</h1><p className="page-subtitle">Try reloading to reconnect to your workspace.</p><Button className="mt-5" onClick={() => window.location.reload()}>Reload</Button></div>
 }
-export function NotFound() { return <div><h1 className="page-title">Page not found</h1><Button className="mt-6" render={<Link to="/" />}>Back to your dashboard</Button></div> }
+export function NotFound() { return <div><h1 className="page-title">Page not found</h1><Button className="mt-6" render={<Link to="/apps" />}>Back to your dashboard</Button></div> }

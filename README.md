@@ -16,6 +16,13 @@ This globally registered Bun command works from any directory. It installs locke
 
 The global link points at this workspace. Run `bun link` again if you move it.
 
+## Website and app routes
+
+- `/`: public Cameron Blue homepage with a top-bar sign-in link.
+- `/apps`: private dashboard after sign-in.
+- `/log` and `/log/data`: private Log sub-app.
+- `/settings`: private account and admin settings.
+
 ## Accounts
 
 The initial admin account is **Cameron_Blue**, with the initial password supplied by the owner during setup. The password is not saved in source or documentation. Convex Auth stores a password hash. The temporary bootstrap environment variables were removed after creation.
