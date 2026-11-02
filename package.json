@@ -12,7 +12,10 @@
     "setup": "bun run scripts/setup.ts",
     "typecheck": "tsc -b && tsc -p convex/tsconfig.json",
     "test": "bun --bun ./node_modules/vitest/vitest.mjs run --pool=threads",
-    "test:e2e": "bun --bun ./node_modules/@playwright/test/cli.js test"
+    "test:e2e": "bun --bun ./node_modules/@playwright/test/cli.js test",
+    "build:cloudflare": "bunx --bun convex deploy --typecheck disable --cmd \"bun run build\" --cmd-url-env-var-name VITE_CONVEX_URL",
+    "deploy:cloudflare": "bun --bun ./node_modules/wrangler/wrangler-dist/cli.js deploy",
+    "check:cloudflare": "bun run build && bun --bun ./node_modules/wrangler/wrangler-dist/cli.js deploy --dry-run --outdir .wrangler/dry-run"
   },
   "dependencies": {
     "@auth/core": "0.41.1",
@@ -47,7 +50,8 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.156.1"
   },
   "bin": {
     "blue-app": "./scripts/blue-app.ts"

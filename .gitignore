@@ -33,3 +33,8 @@ artifacts/
 .env
 .env.*
 !.env.example
+
+# Wrangler local state and deployment output.
+.wrangler/
+.dev.vars
+.dev.vars.*

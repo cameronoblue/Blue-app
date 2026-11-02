@@ -70,4 +70,4 @@ Convex's built-in compiler subprocess cannot invoke the native TypeScript 7 comp
 
 ## Deployment
 
-Connected to personal team `cameron-blue`, project `blue-app`, development deployment `elated-chinchilla-392`. `.env.local` is ignored and must not be committed. Production hosting is not configured. For a public mobile URL, use an HTTPS SPA host with fallback rewrites to `index.html`, set `VITE_CONVEX_URL` at build time, and configure a separate production Convex deployment and administrator account.
+Connected to personal team `cameron-blue`, project `blue-app`, development deployment `elated-chinchilla-392`. `.env.local` is ignored and must not be committed. Cloudflare Workers configuration is prepared for `blue-app` and `cameronblue.org`; see [CLOUDFLARE.md](./CLOUDFLARE.md) for build settings and production initialization. Production auth, the admin account, and hosting must be initialized separately from development.
