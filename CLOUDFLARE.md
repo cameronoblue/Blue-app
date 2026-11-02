@@ -35,6 +35,6 @@ Keep automatic builds for non-production branches disabled until separate previe
 
 `bun run check:cloudflare` runs strict typechecking, builds the frontend, and performs a Wrangler dry run. It does not upload the site or deploy Convex. A local build uses the local development URL; use the combined Cloudflare build for production.
 
-The deployment script invokes the locked Wrangler CLI through Bun directly to avoid its Windows subprocess launcher failing on workspace paths containing spaces.
+The deployment script invokes the locked Wrangler CLI through Bun directly to avoid its Windows subprocess launcher failing on workspace paths containing spaces. The build script passes Convex arguments as an array so the frontend build command remains one argument on Linux and Windows.
 
 References: [Workers SPA routing](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/), [Workers build settings](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/), [Convex deployment command](https://docs.convex.dev/cli/reference/deploy).
