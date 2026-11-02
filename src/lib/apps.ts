@@ -1,4 +1,4 @@
-import { ListPlus, CircleDot } from 'lucide-react'
+import { ListPlus, Gamepad2 } from 'lucide-react'
 
 // Add future sub-apps here and register their lazy routes in src/router.tsx.
 // Domain data stays in Convex; this catalog is static navigation metadata.
@@ -6,6 +6,6 @@ export const apps = [{
   id: 'log', access: 'private', name: 'Log app', href: '/log', icon: ListPlus,
   description: 'A quick place for things you do, things you notice, and patterns worth finding.',
 }, {
-  id: 'basketball', access: 'public', name: 'Flick Basketball', href: '/basketball', icon: CircleDot,
-  description: 'Flick, swish, repeat. Chase a moving hoop, build your streak, and beat the clock.',
+  id: 'games', access: 'public', name: 'Games', href: '/games', icon: Gamepad2,
+  description: 'Your arcade inside Blue. Play Flick Basketball and find new games as they arrive.',
 }]

@@ -3,7 +3,8 @@ import { ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function PublicHeader() {
-  const inPublicApp = useLocation().pathname.startsWith('/basketball')
+  const pathname = useLocation().pathname
+  const inPublicApp = pathname.startsWith('/basketball') || pathname === '/games'
   return <header className="public-header">
     <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight" aria-label="Cameron Blue home"><span className="public-monogram">cb.</span><span className="hidden sm:inline">cameronblue.org</span></Link>
     <nav aria-label="Public navigation" className="flex items-center gap-3 sm:gap-6">

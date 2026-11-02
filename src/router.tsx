@@ -5,6 +5,7 @@ export const router = createBrowserRouter([{ element: <RootLayout />, errorEleme
   { index: true, lazy: async () => ({ Component: (await import('./pages/home')).HomePage }) },
   { path: 'sign-in', element: <SignIn /> },
   { lazy: async () => ({ Component: (await import('./pages/public-apps')).PublicAppsLayout }), children: [
+    { path: 'games', lazy: async () => ({ Component: (await import('./pages/games')).GamesPage }) },
     { path: 'public-apps', lazy: async () => ({ Component: (await import('./pages/public-apps')).PublicAppsPage }) },
     { path: 'basketball', lazy: async () => ({ Component: (await import('./pages/basketball')).BasketballPage }) },
   ] },
