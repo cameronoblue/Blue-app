@@ -250,3 +250,40 @@
   .public-home .text-muted-foreground { @apply text-[#667085]; }
   .public-home .public-workspace .public-kicker { @apply text-blue-200; }
 }
+
+@layer components {
+  .basketball-page { @apply space-y-6; }
+  .basketball-heading { @apply flex items-end justify-between gap-3; }
+  .basketball-content { @apply grid items-start gap-6 xl:grid-cols-[minmax(0,430px)_minmax(240px,1fr)]; }
+  .basketball-machine { @apply mx-auto w-full max-w-[430px] overflow-hidden rounded-[22px] border border-[#273952] bg-[#0b1428] shadow-xl; }
+  .basketball-scoreboard { @apply grid grid-cols-3 border-b border-white/10 px-4 py-4 text-white; }
+  .basketball-scoreboard > div { @apply flex flex-col items-center; }
+  .basketball-scoreboard > div + div { @apply border-l border-white/10; }
+  .basketball-scoreboard span { @apply flex items-center gap-1.5 text-[9px] font-semibold tracking-[.15em] text-slate-400; }
+  .basketball-scoreboard strong { @apply mt-1.5 text-3xl leading-none font-semibold tracking-tight tabular-nums; }
+  .basketball-scoreboard small { @apply text-xs font-medium text-slate-400; }
+  .basketball-bonus { @apply grid grid-cols-2 gap-y-2 px-5 pt-3 text-[10px] text-slate-400; }
+  .basketball-bonus > span:nth-child(2) { @apply text-right text-orange-200; }
+  .basketball-progress { @apply col-span-2 h-1 overflow-hidden rounded-full bg-white/10; }
+  .basketball-progress > div { @apply h-full rounded-full bg-orange-400 transition-[width]; }
+  .basketball-court { @apply relative; }
+  .basketball-court canvas { @apply block w-full touch-none outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-inset; aspect-ratio: 390 / 540; }
+  .basketball-overlay { @apply absolute inset-0 flex items-center justify-center bg-[#08101c]/65 p-5 backdrop-blur-[3px]; }
+  .basketball-overlay-card { @apply flex w-full max-w-xs flex-col items-center rounded-2xl border border-white/15 bg-[#101d30]/95 p-6 text-center text-white shadow-2xl; }
+  .basketball-overlay-icon { @apply mb-5 grid size-16 place-items-center rounded-2xl border border-orange-300/20 bg-orange-300/10 text-orange-300; }
+  .basketball-kicker { @apply text-[8px] font-semibold tracking-[.18em] text-orange-200; }
+  .basketball-overlay-card h2 { @apply mt-3 text-3xl font-semibold tracking-tight; }
+  .basketball-overlay-card > p:not(.basketball-kicker) { @apply mt-4 text-xs leading-6 text-slate-300; }
+  .basketball-primary { @apply mt-6 h-12 w-full gap-2 rounded-xl bg-orange-400 text-[#172036] hover:bg-orange-300; }
+  .basketball-overlay-hint { @apply mt-4 text-[10px] text-slate-400; }
+  .basketball-controls { @apply flex items-center justify-between gap-2 border-t border-white/10 px-4 py-2; }
+  .basketball-save { @apply mt-4 flex items-center justify-center gap-2 text-[10px] leading-relaxed text-slate-300; }
+  .basketball-guide { @apply min-w-0; }
+  .basketball-expanded { @apply fixed inset-0 z-50 overflow-y-auto bg-background px-4 pt-3 pb-5; }
+  .basketball-expanded .basketball-heading { @apply mx-auto mb-3 max-w-[430px]; }
+  .basketball-expanded .basketball-heading h1 { @apply mt-0 text-lg; }
+  .basketball-expanded .basketball-heading .eyebrow, .basketball-expanded .basketball-heading a { @apply hidden; }
+  .basketball-expanded .basketball-content { @apply block; }
+  .basketball-expanded .basketball-guide { @apply hidden; }
+  .basketball-expanded .basketball-machine { max-width: min(430px, calc((100svh - 230px) * 390 / 540)); }
+}

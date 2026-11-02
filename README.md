@@ -88,3 +88,16 @@ Settings includes admin-only Guest reviews controls to hide and restore submissi
 Convex's rate-limiter component enforces one submission per hour per browser key and global token-bucket budgets of 10 per minute and 100 per day. A honeypot and idempotency keys deter basic bots and duplicate retries. Browser keys are a basic abuse deterrent, not verified identities; they can be reset by clearing storage. There is no CAPTCHA integration.
 
 The guest browser test runs against development with synthetic review text and hides the test submission afterward. Backend tests cover guest submission, bounds, retry deduplication, limits, and admin-only hide/restore access.
+
+## Flick Basketball
+
+Open the private Basketball sub-app at `/basketball`, from the dashboard or Play tab. Flick upward starting on the ball: sideways angle changes direction, and distance/speed determine power. Aim ahead of the moving hoop. The court includes a short dotted aim guide, rim rebounds, and an optional focus mode.
+
+- Start with 60 seconds. Score milestones are 10, 25, 45, 70, 100 points, then continue with progressively larger gaps. Each milestone adds 10 seconds.
+- Each basket starts at 2 points. Makes 1-3 award 2 each, 4-6 award 4 each, 7-9 award 6 each, 10-12 award 8 each, and 13 onward award 10 each. A miss resets the streak.
+- The hoop starts slowly and accelerates with successful baskets and active play time.
+- Vibration patterns become longer and repeat with stronger streaks, only on supported browsers/hardware. Unsupported browsers retain all game mechanics and visual feedback.
+- Pause/resume manually, or automatically pause when the tab is hidden or the window loses focus. Keyboard support: left/right aim, up/down power, Space shoots, Escape pauses.
+- Completed runs are saved privately in Convex, with best score and the most recent score. Game physics and in-progress state are ephemeral client state. These are personal client-reported scores, not a competitive/verified leaderboard.
+- Physics and scoring use fixed time steps. Timer expiration ends the run immediately; shots crossing after the buzzer do not score. Finish this run on the pause screen ends and saves early.
+- Tests cover actual shot simulation, moving-hoop crossing, misses, bonus thresholds, streak rewards, timer/pause/buzzer, haptic patterns, private score storage, and browser play-through.

@@ -6,6 +6,12 @@ export const eventColor = v.union(v.literal('blue'), v.literal('violet'), v.lite
 export const logLocation = v.object({ latitude: v.number(), longitude: v.number(), accuracy: v.number(), capturedAt: v.number() })
 export default defineSchema({
   ...authTables,
+  basketballRuns: defineTable({
+    ownerId: v.id('users'), runId: v.string(), score: v.number(), made: v.number(),
+    shots: v.number(), bestStreak: v.number(), playedSeconds: v.number(),
+  }).index('by_ownerId', ['ownerId'])
+    .index('by_ownerId_and_score', ['ownerId', 'score'])
+    .index('by_ownerId_and_runId', ['ownerId', 'runId']),
   reviews: defineTable({
     displayName: v.string(), rating: v.number(), comment: v.string(),
     hidden: v.boolean(), requestId: v.string(),

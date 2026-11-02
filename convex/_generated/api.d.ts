@@ -10,6 +10,7 @@
 
 import type * as accounts from "../accounts.js";
 import type * as auth from "../auth.js";
+import type * as basketball from "../basketball.js";
 import type * as credentials from "../credentials.js";
 import type * as http from "../http.js";
 import type * as lib_access from "../lib/access.js";
@@ -25,6 +26,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
   auth: typeof auth;
+  basketball: typeof basketball;
   credentials: typeof credentials;
   http: typeof http;
   "lib/access": typeof lib_access;

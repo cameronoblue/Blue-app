@@ -46,3 +46,5 @@ Convex agent skills for common tasks can be installed by running
 - The root / is a public Cameron Blue homepage. The private dashboard is /apps; sign-in redirects there. Keep all domain data behind authenticated routes and server authorization.
 
 - Guest reviews are an intentional public data exception: anonymous read/submit is allowed for reviews only, with server validation, rate limits, and no private identity fields in public responses. Only admins may hide/restore reviews. Other domain data remains private.
+
+- Basketball is the private /basketball sub-app. Frame-by-frame physics is ephemeral client state; completed runs and personal bests are stored only in Convex. Keep moving-rim scoring downward-only, timer bonuses milestone-based, and vibration optional/feature-detected. Pause on tab/window backgrounding.

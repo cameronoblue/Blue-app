@@ -6,6 +6,7 @@ export const router = createBrowserRouter([{ element: <RootLayout />, errorEleme
   { path: 'sign-in', element: <SignIn /> },
   { element: <ProtectedLayout />, children: [
     { path: 'apps', element: <Dashboard /> },
+    { path: 'basketball', lazy: async () => ({ Component: (await import('./pages/basketball')).BasketballPage }) },
     { path: 'log', lazy: async () => ({ Component: (await import('./pages/log-layout')).LogLayout }), children: [
       { index: true, lazy: async () => ({ Component: (await import('./pages/log')).LogPage }) },
       { path: 'data', lazy: async () => ({ Component: (await import('./pages/data')).DataPage }) },
