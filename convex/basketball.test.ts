@@ -22,3 +22,18 @@ it('keeps basketball records private, deduplicates saves, and rejects invalid re
   await owner.mutation(api.basketball.saveRun, { ...run, runId: crypto.randomUUID(), score: 2, made: 1, shots: 3, bestStreak: 1 })
   expect(await owner.query(api.basketball.stats, {})).toEqual({ bestScore: 10, lastScore: 2 })
 })
+it('restricts practice to admins and excludes registered rounds from all score records', async () => {
+  const t = convexTest(schema, modules)
+  const ids = await t.run(async ctx => ({ admin: await ctx.db.insert('users', { username: 'Admin', role: 'admin' }), member: await ctx.db.insert('users', { username: 'Member', role: 'member' }) }))
+  const admin = t.withIdentity({ subject: `${ids.admin}|session` })
+  const member = t.withIdentity({ subject: `${ids.member}|session` })
+  const run = { runId: crypto.randomUUID(), score: 10, made: 4, shots: 4, bestStreak: 4, playedSeconds: 10 }
+  await expect(t.mutation(api.basketball.startPractice, { runId: run.runId })).rejects.toThrow(/Not authorized/)
+  await expect(member.mutation(api.basketball.startPractice, { runId: run.runId })).rejects.toThrow(/Admin access/)
+  await admin.mutation(api.basketball.startPractice, { runId: run.runId })
+  await admin.mutation(api.basketball.startPractice, { runId: run.runId })
+  await expect(admin.mutation(api.basketball.saveRun, run)).rejects.toThrow(/practice/)
+  expect(await admin.query(api.basketball.stats, {})).toEqual({ bestScore: 0, lastScore: null })
+  await admin.mutation(api.basketball.saveRun, { ...run, runId: crypto.randomUUID() })
+  expect(await admin.query(api.basketball.stats, {})).toEqual({ bestScore: 10, lastScore: 10 })
+})

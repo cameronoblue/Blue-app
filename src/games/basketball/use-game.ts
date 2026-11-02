@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type KeyboardEvent } from 'react'
 import { newGame, step, shoot, flickVelocity, multiplier, hapticPattern, WIDTH, HEIGHT, START, type Game, type Vec } from './engine'
 import { renderCourt } from './render'
-export type RunResult = { runId: string, score: number, made: number, shots: number, bestStreak: number, playedSeconds: number }
+export type RunResult = { runId: string, score: number, made: number, shots: number, bestStreak: number, playedSeconds: number, assisted: boolean }
 export type Hud = Pick<Game, 'status' | 'score' | 'made' | 'shots' | 'streak' | 'bestStreak' | 'remaining' | 'nextBonus'> & { multiplier: number, feedback: string }
 function hudOf(game: Game): Hud { return { status: game.status, score: game.score, made: game.made, shots: game.shots, streak: game.streak, bestStreak: game.bestStreak, remaining: game.remaining, nextBonus: game.nextBonus, multiplier: multiplier(game.streak + 1), feedback: game.feedbackTime > 0 ? game.feedback : '' } }
 export function useBasketball(onFinish: (result: RunResult) => void) {
@@ -13,6 +13,7 @@ export function useBasketball(onFinish: (result: RunResult) => void) {
   const finish = useRef(onFinish)
   const vibrations = useRef(true)
   const reported = useRef(false)
+  const assisted = useRef(false)
   const [hud, setHud] = useState<Hud>(() => hudOf(newGame()))
   const [haptics, setHaptics] = useState(true)
   const [canVibrate] = useState(() => typeof navigator.vibrate === 'function')
@@ -25,8 +26,9 @@ export function useBasketball(onFinish: (result: RunResult) => void) {
     if (game.current.status !== 'playing') return
     game.current.status = 'paused'; drag.current = null; aim.current = null; stopVibration(); sync()
   }, [stopVibration, sync])
-  const start = useCallback(() => {
-    game.current = newGame(); game.current.status = 'playing'; runId.current = crypto.randomUUID(); reported.current = false
+  const start = useCallback((id: string, practice = false) => {
+    assisted.current = practice
+    game.current = newGame(); game.current.status = 'playing'; runId.current = id; reported.current = false
     drag.current = null; aim.current = null; keyboard.current = { angle: 0, power: 900 }; sync(); canvas.current?.focus({ preventScroll: true })
   }, [sync])
   const resume = useCallback(() => { if (game.current.status === 'paused') { game.current.status = 'playing'; sync(); canvas.current?.focus({ preventScroll: true }) } }, [sync])
@@ -60,7 +62,7 @@ export function useBasketball(onFinish: (result: RunResult) => void) {
       if (game.current.status === 'over' && !reported.current) {
         reported.current = true
         const g = game.current
-        if (g.elapsed > 0) finish.current({ runId: runId.current, score: g.score, made: g.made, shots: g.shots, bestStreak: g.bestStreak, playedSeconds: Math.round(g.elapsed * 1000) / 1000 })
+        if (g.elapsed > 0) finish.current({ runId: runId.current, score: g.score, made: g.made, shots: g.shots, bestStreak: g.bestStreak, assisted: assisted.current, playedSeconds: Math.round(g.elapsed * 1000) / 1000 })
         sync()
       }
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -103,7 +105,7 @@ export function useBasketball(onFinish: (result: RunResult) => void) {
     const p = point(event), velocity = flickVelocity(p.x - initial.point.x, p.y - initial.point.y, performance.now() - initial.time)
     drag.current = null; aim.current = null
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    if (velocity) shoot(game.current, velocity)
+    if (velocity) shoot(game.current, velocity, assisted.current)
     else { game.current.feedback = 'FLICK UPWARD FROM THE BALL'; game.current.feedbackTime = 1 }
     sync()
   }
@@ -118,7 +120,7 @@ export function useBasketball(onFinish: (result: RunResult) => void) {
     if (event.key === 'ArrowUp') keyboard.current.power = Math.min(1170, keyboard.current.power + 25)
     if (event.key === 'ArrowDown') keyboard.current.power = Math.max(750, keyboard.current.power - 25)
     const velocity = { x: Math.sin(keyboard.current.angle) * keyboard.current.power * .42, y: -Math.cos(keyboard.current.angle) * keyboard.current.power }
-    if (event.key === ' ' && !event.repeat) { shoot(game.current, velocity); aim.current = null; sync() } else aim.current = velocity
+    if (event.key === ' ' && !event.repeat) { shoot(game.current, velocity, assisted.current); aim.current = null; sync() } else aim.current = velocity
   }
   return { canvas, hud, start, pause, resume, end, haptics, setHaptics, canVibrate, pointerDown, pointerMove, pointerUp, cancel, keyDown }
 }

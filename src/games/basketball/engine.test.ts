@@ -75,3 +75,15 @@ describe('basketball physics and rules', () => {
     expect(Math.max(...hapticPattern(1000))).toBeLessThanOrEqual(100)
   })
 })
+it('guides every rapid-fire practice shot through the accelerating hoop regardless of angle', () => {
+  const game = newGame(); game.status = 'playing'; game.elapsed = 200
+  for (let i = 0; i < 20; i++) {
+    expect(shoot(game, { x: i % 2 ? -450 : 450, y: -300 }, true)).toBe(true)
+    for (let frame = 0; frame < 15; frame++) step(game, 1 / 120)
+  }
+  for (let frame = 0; frame < 400; frame++) step(game, 1 / 120)
+  expect(game.made).toBe(20)
+  expect(game.shots).toBe(20)
+  expect(game.bestStreak).toBe(20)
+  expect(game.flights).toHaveLength(0)
+})

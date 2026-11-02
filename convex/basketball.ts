@@ -1,6 +1,16 @@
 import { v, ConvexError } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { requireUser } from './lib/access'
+import { requireUser, requireAdmin } from './lib/access'
+
+export const startPractice = mutation({ args: { runId: v.string() }, returns: v.null(), handler: async (ctx, { runId }) => {
+  const user = await requireAdmin(ctx)
+  if (!/^[0-9a-f-]{36}$/i.test(runId)) throw new ConvexError('Invalid run ID.')
+  const saved = await ctx.db.query('basketballRuns').withIndex('by_ownerId_and_runId', q => q.eq('ownerId', user._id).eq('runId', runId)).unique()
+  if (saved) throw new ConvexError('This run has already been saved.')
+  const existing = await ctx.db.query('basketballPracticeRuns').withIndex('by_ownerId_and_runId', q => q.eq('ownerId', user._id).eq('runId', runId)).unique()
+  if (!existing) await ctx.db.insert('basketballPracticeRuns', { ownerId: user._id, runId })
+  return null
+} })
 
 export const stats = query({ args: {}, returns: v.object({ bestScore: v.number(), lastScore: v.union(v.number(), v.null()) }), handler: async ctx => {
   const user = await requireUser(ctx)
@@ -11,6 +21,8 @@ export const stats = query({ args: {}, returns: v.object({ bestScore: v.number()
 export const saveRun = mutation({ args: { runId: v.string(), score: v.number(), made: v.number(), shots: v.number(), bestStreak: v.number(), playedSeconds: v.number() }, returns: v.null(), handler: async (ctx, args) => {
   const user = await requireUser(ctx)
   const { score, made, shots, bestStreak, playedSeconds } = args
+  const practice = await ctx.db.query('basketballPracticeRuns').withIndex('by_ownerId_and_runId', q => q.eq('ownerId', user._id).eq('runId', args.runId)).unique()
+  if (practice) throw new ConvexError('Aimbot practice runs cannot be saved as high scores.')
   if (!/^[0-9a-f-]{36}$/i.test(args.runId) || ![score, made, shots, bestStreak].every(n => Number.isSafeInteger(n) && n >= 0) || score % 2 !== 0 || score < made * 2 || score > made * 10 || made > shots || bestStreak > made || shots > 100000 || !Number.isFinite(playedSeconds) || playedSeconds <= 0 || playedSeconds > 86400) throw new ConvexError('This game result is invalid.')
   const existing = await ctx.db.query('basketballRuns').withIndex('by_ownerId_and_runId', q => q.eq('ownerId', user._id).eq('runId', args.runId)).unique()
   if (!existing) await ctx.db.insert('basketballRuns', { ...args, ownerId: user._id })

@@ -6,7 +6,7 @@ export const RIM_HALF = 33
 export const BALL_RADIUS = 13
 export const START = { x: WIDTH / 2, y: HEIGHT - 65 }
 export type Vec = { x: number, y: number }
-export type Ball = Vec & { vx: number, vy: number, flying: boolean, scored: boolean, age: number, trail?: Vec[] }
+export type Ball = Vec & { vx: number, vy: number, flying: boolean, scored: boolean, age: number, trail?: Vec[], assisted?: boolean }
 export type Game = {
   status: 'ready' | 'playing' | 'paused' | 'over'
   remaining: number, elapsed: number, score: number, made: number, shots: number,
@@ -30,9 +30,9 @@ export function flickVelocity(dx: number, dy: number, milliseconds: number): Vec
   const power = Math.min(1170, Math.max(750, 660 + distance * 1.8 + speed * 100))
   return { x: Math.sin(angle) * power * .42, y: -Math.cos(angle) * power }
 }
-export function shoot(game: Game, velocity: Vec) {
+export function shoot(game: Game, velocity: Vec, assisted = false) {
   if (game.status !== 'playing' || game.respawn > 0 || game.flights.length >= 32) return false
-  game.flights.push({ ...freshBall(), vx: velocity.x, vy: velocity.y, flying: true, trail: [] })
+  game.flights.push({ ...freshBall(), vx: assisted ? 0 : velocity.x, vy: assisted ? -900 : velocity.y, assisted, flying: true, trail: [] })
   game.respawn = .1
   game.shots++
   return true
@@ -81,12 +81,18 @@ export function step(game: Game, dt: number): StepEvent[] {
   for (const ball of game.flights) {
   const before = { x: ball.x, y: ball.y }
   ball.age += dt; ball.vy += GRAVITY * dt; ball.x += ball.vx * dt; ball.y += ball.vy * dt
+  // Practice shots track the moving rim on both sides of the descending crossing.
+  if (ball.assisted && !ball.scored) {
+    const progress = Math.min(1, Math.max(0, (START.y - ball.y) / (START.y - RIM_Y)))
+    ball.x = START.x + (game.hoopX - START.x) * progress
+    if (ball.vy > 0 && before.y < RIM_Y) ball.x = game.hoopX
+  }
   ball.trail?.push({ x: ball.x, y: ball.y })
   if (ball.trail && ball.trail.length > 10) ball.trail.shift()
   if (!ball.scored && crossedRim(before, ball, oldHoop, game.hoopX, ball.vy > 0)) {
     ball.scored = true; events.push(awardBasket(game))
   }
-  if (!ball.scored) {
+  if (!ball.scored && !ball.assisted) {
     const hoopVelocity = (game.hoopX - oldHoop) / dt
     rimBounce(ball, game.hoopX - RIM_HALF, hoopVelocity)
     rimBounce(ball, game.hoopX + RIM_HALF, hoopVelocity)
