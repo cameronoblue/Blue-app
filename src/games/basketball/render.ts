@@ -1,5 +1,5 @@
 import { WIDTH, HEIGHT, RIM_Y, RIM_HALF, BALL_RADIUS, START, GRAVITY, type Game, type Vec } from './engine'
-export function renderCourt(ctx: CanvasRenderingContext2D, game: Game, aim: Vec | null, trail: Vec[]) {
+export function renderCourt(ctx: CanvasRenderingContext2D, game: Game, aim: Vec | null) {
   ctx.clearRect(0, 0, WIDTH, HEIGHT)
   const sky = ctx.createLinearGradient(0, 0, 0, HEIGHT)
   sky.addColorStop(0, '#0b1428'); sky.addColorStop(.7, '#172c44'); sky.addColorStop(1, '#25465a')
@@ -45,8 +45,8 @@ export function renderCourt(ctx: CanvasRenderingContext2D, game: Game, aim: Vec 
     for (let i = 1; i < 13; i++) { const t = i * .038; const x = START.x + aim.x * t, y = START.y + aim.y * t + GRAVITY * t * t / 2; ctx.globalAlpha = 1 - i / 14; ctx.beginPath(); ctx.arc(x, y, Math.max(1.2, 3 - i * .13), 0, Math.PI * 2); ctx.fill() }
     ctx.globalAlpha = 1
   }
-  const ball = game.ball
-  if (game.respawn <= 0) {
+  for (const ball of [...game.flights, game.ball]) {
+    const trail = ball.trail ?? []
     if (ball.flying) trail.forEach((point, i) => { ctx.fillStyle = `rgba(255,158,61,${i / Math.max(1, trail.length) * .16})`; ctx.beginPath(); ctx.arc(point.x, point.y, BALL_RADIUS * i / Math.max(1, trail.length), 0, Math.PI * 2); ctx.fill() })
     if (!ball.flying) {
       ctx.fillStyle = '#00000030'; ctx.beginPath(); ctx.ellipse(ball.x, ball.y + 20, 24, 7, 0, 0, Math.PI * 2); ctx.fill()
@@ -60,6 +60,6 @@ export function renderCourt(ctx: CanvasRenderingContext2D, game: Game, aim: Vec 
     ctx.beginPath(); ctx.ellipse(0, 0, BALL_RADIUS * .45, BALL_RADIUS, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore()
   }
   ctx.textAlign = 'center'
-  if (!ball.flying && game.status === 'playing' && !game.respawn) { ctx.font = '10px sans-serif'; ctx.fillStyle = '#fbe7c2'; ctx.fillText('FLICK UP FROM THE BALL', WIDTH / 2, START.y + 43) }
+  if (game.status === 'playing' && !game.respawn) { ctx.font = '10px sans-serif'; ctx.fillStyle = '#fbe7c2'; ctx.fillText('FLICK UP FROM THE BALL', WIDTH / 2, START.y + 43) }
   if (game.feedbackTime > 0) { ctx.globalAlpha = Math.min(1, game.feedbackTime * 3); ctx.fillStyle = game.feedback.includes('+10s') ? '#b5f9b6' : '#ffe0a1'; ctx.font = 'bold 19px sans-serif'; ctx.fillText(game.feedback, WIDTH / 2, 245); ctx.globalAlpha = 1 }
 }

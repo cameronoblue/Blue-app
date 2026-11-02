@@ -6,18 +6,18 @@ export const RIM_HALF = 33
 export const BALL_RADIUS = 13
 export const START = { x: WIDTH / 2, y: HEIGHT - 65 }
 export type Vec = { x: number, y: number }
-export type Ball = Vec & { vx: number, vy: number, flying: boolean, scored: boolean, age: number }
+export type Ball = Vec & { vx: number, vy: number, flying: boolean, scored: boolean, age: number, trail?: Vec[] }
 export type Game = {
   status: 'ready' | 'playing' | 'paused' | 'over'
   remaining: number, elapsed: number, score: number, made: number, shots: number,
   streak: number, bestStreak: number, nextBonus: number, bonusLevel: number,
-  phase: number, hoopX: number, ball: Ball, respawn: number,
+  phase: number, hoopX: number, ball: Ball, flights: Ball[], respawn: number,
   feedback: string, feedbackTime: number, netTime: number,
 }
 export type StepEvent = { kind: 'score', points: number, bonus: number, streak: number } | { kind: 'miss' } | { kind: 'over' }
 export function freshBall(): Ball { return { ...START, vx: 0, vy: 0, flying: false, scored: false, age: 0 } }
 export function newGame(): Game {
-  return { status: 'ready', remaining: 60, elapsed: 0, score: 0, made: 0, shots: 0, streak: 0, bestStreak: 0, nextBonus: 10, bonusLevel: 0, phase: 0, hoopX: WIDTH / 2, ball: freshBall(), respawn: 0, feedback: '', feedbackTime: 0, netTime: 0 }
+  return { status: 'ready', remaining: 60, elapsed: 0, score: 0, made: 0, shots: 0, streak: 0, bestStreak: 0, nextBonus: 10, bonusLevel: 0, phase: 0, hoopX: WIDTH / 2, ball: freshBall(), flights: [], respawn: 0, feedback: '', feedbackTime: 0, netTime: 0 }
 }
 export function multiplier(streak: number) { return Math.min(5, 1 + Math.floor(Math.max(0, streak - 1) / 3)) }
 export function hoopSpeed(made: number, elapsed: number) { return Math.min(1.95, .45 + made * .055 + elapsed * .002) }
@@ -31,8 +31,9 @@ export function flickVelocity(dx: number, dy: number, milliseconds: number): Vec
   return { x: Math.sin(angle) * power * .42, y: -Math.cos(angle) * power }
 }
 export function shoot(game: Game, velocity: Vec) {
-  if (game.status !== 'playing' || game.ball.flying || game.respawn > 0) return false
-  game.ball = { ...freshBall(), vx: velocity.x, vy: velocity.y, flying: true }
+  if (game.status !== 'playing' || game.respawn > 0 || game.flights.length >= 32) return false
+  game.flights.push({ ...freshBall(), vx: velocity.x, vy: velocity.y, flying: true, trail: [] })
+  game.respawn = .1
   game.shots++
   return true
 }
@@ -76,15 +77,12 @@ export function step(game: Game, dt: number): StepEvent[] {
   const oldHoop = game.hoopX
   game.phase += hoopSpeed(game.made, game.elapsed) * dt
   game.hoopX = WIDTH / 2 + Math.sin(game.phase) * 104
-  if (game.respawn > 0) {
-    game.respawn = Math.max(0, game.respawn - dt)
-    if (!game.respawn) game.ball = freshBall()
-    return events
-  }
-  const ball = game.ball
-  if (!ball.flying) return events
+  game.respawn = Math.max(0, game.respawn - dt)
+  for (const ball of game.flights) {
   const before = { x: ball.x, y: ball.y }
   ball.age += dt; ball.vy += GRAVITY * dt; ball.x += ball.vx * dt; ball.y += ball.vy * dt
+  ball.trail?.push({ x: ball.x, y: ball.y })
+  if (ball.trail && ball.trail.length > 10) ball.trail.shift()
   if (!ball.scored && crossedRim(before, ball, oldHoop, game.hoopX, ball.vy > 0)) {
     ball.scored = true; events.push(awardBasket(game))
   }
@@ -97,8 +95,10 @@ export function step(game: Game, dt: number): StepEvent[] {
   if (ball.x > WIDTH - BALL_RADIUS) { ball.x = WIDTH - BALL_RADIUS; ball.vx = -Math.abs(ball.vx) * .6 }
   if (ball.y > HEIGHT + 35 || ball.age > 4.5 || (ball.scored && ball.y > RIM_Y + 95)) {
     if (!ball.scored) { game.streak = 0; game.feedback = 'NEXT SHOT. YOU GOT THIS.'; game.feedbackTime = .7; events.push({ kind: 'miss' }) }
-    ball.flying = false; game.respawn = ball.scored ? .16 : .22
+    ball.flying = false
   }
+  }
+  game.flights = game.flights.filter(ball => ball.flying)
   return events
 }
 export function hapticPattern(streak: number): number[] {

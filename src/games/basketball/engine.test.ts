@@ -32,6 +32,20 @@ describe('basketball physics and rules', () => {
     expect(game.made).toBe(0); expect(game.streak).toBe(0); expect(game.ball.flying).toBe(false)
     expect(game.ball.y).toBeLessThan(HEIGHT)
   })
+  it('launches another ball while the previous ball is airborne and scores each only once', () => {
+    const game = newGame(); game.status = 'playing'
+    shoot(game, { x: 45, y: -900 })
+    for (let i = 0; i < 18; i++) step(game, 1 / 120)
+    expect(game.flights).toHaveLength(1)
+    expect(game.flights[0].flying).toBe(true)
+    expect(shoot(game, { x: 45, y: -900 })).toBe(true)
+    expect(game.flights).toHaveLength(2)
+    expect(game.shots).toBe(2)
+    let scores = 0
+    for (let i = 0; i < 500; i++) scores += step(game, 1 / 120).filter(event => event.kind === 'score').length
+    expect(scores).toBe(2); expect(game.score).toBe(4); expect(game.made).toBe(2)
+    expect(game.flights).toHaveLength(0)
+  })
   it('starts at 60 seconds, pauses without consuming time, and ends at the buzzer', () => {
     const game = newGame(); expect(game.remaining).toBe(60)
     game.status = 'playing'; step(game, .5); expect(game.remaining).toBe(59.5)

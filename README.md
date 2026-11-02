@@ -91,7 +91,7 @@ The guest browser test runs against development with synthetic review text and h
 
 ## Flick Basketball
 
-Open Public apps at `/public-apps`, then play Flick Basketball at `/basketball`. No account or sign-in is required. The signed-in dashboard also links to the public game. Flick upward starting on the ball: sideways angle changes direction, and distance/speed determine power. Aim ahead of the moving hoop. The court includes a short dotted aim guide, rim rebounds, and an optional focus mode.
+Open Public apps at `/public-apps`, then play Flick Basketball at `/basketball`. No account or sign-in is required. The signed-in dashboard also links to the public game. Flick upward starting on the ball: sideways angle changes direction, and distance/speed determine power. Aim ahead of the moving hoop. The court includes a short dotted aim guide, rim rebounds, and an optional focus mode. Rapid-fire shots are supported: a fresh ball is ready after 0.1 seconds, and earlier balls continue flying and scoring independently.
 
 - Start with 60 seconds. Score milestones are 10, 25, 45, 70, 100 points, then continue with progressively larger gaps. Each milestone adds 10 seconds.
 - Each basket starts at 2 points. Makes 1-3 award 2 each, 4-6 award 4 each, 7-9 award 6 each, 10-12 award 8 each, and 13 onward award 10 each. A miss resets the streak.

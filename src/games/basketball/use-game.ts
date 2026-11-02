@@ -39,7 +39,6 @@ export function useBasketball(onFinish: (result: RunResult) => void) {
     const ctx = element?.getContext('2d')
     if (!element || !ctx) return
     let frame = 0, previous = 0, accumulated = 0, lastSync = 0
-    let trail: Vec[] = []
     function animate(timestamp: number) {
       if (!element || !ctx) return
       const elapsedWall = previous ? Math.max(0, (timestamp - previous) / 1000) : 0
@@ -64,13 +63,12 @@ export function useBasketball(onFinish: (result: RunResult) => void) {
         if (g.elapsed > 0) finish.current({ runId: runId.current, score: g.score, made: g.made, shots: g.shots, bestStreak: g.bestStreak, playedSeconds: Math.round(g.elapsed * 1000) / 1000 })
         sync()
       }
-      if (game.current.ball.flying) { trail.push({ x: game.current.ball.x, y: game.current.ball.y }); if (trail.length > 9) trail.shift() } else trail = []
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       const width = Math.max(1, element.clientWidth)
       const targetWidth = Math.round(width * dpr), targetHeight = Math.round(width * HEIGHT / WIDTH * dpr)
       if (element.width !== targetWidth || element.height !== targetHeight) { element.width = targetWidth; element.height = targetHeight }
       ctx.setTransform(element.width / WIDTH, 0, 0, element.height / HEIGHT, 0, 0)
-      renderCourt(ctx, game.current, aim.current, trail)
+      renderCourt(ctx, game.current, aim.current)
       if (timestamp - lastSync > 80) { sync(); lastSync = timestamp }
       frame = requestAnimationFrame(animate)
     }
@@ -85,7 +83,7 @@ export function useBasketball(onFinish: (result: RunResult) => void) {
     return { x: (event.clientX - rect.left) * WIDTH / rect.width, y: (event.clientY - rect.top) * HEIGHT / rect.height }
   }
   function pointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (!event.isPrimary || game.current.status !== 'playing' || game.current.ball.flying || game.current.respawn > 0 || drag.current) return
+    if (!event.isPrimary || game.current.status !== 'playing' || drag.current) return
     const p = point(event)
     if (Math.hypot(p.x - START.x, p.y - START.y) > 44) return
     event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); event.currentTarget.setPointerCapture(event.pointerId)
