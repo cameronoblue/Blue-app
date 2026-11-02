@@ -3,13 +3,11 @@ import { ArrowRight, ArrowUpRight, Sparkles, Lightbulb, Heart, MoveUpRight, Star
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PublicReviews } from '@/components/reviews'
+import { PublicHeader } from '@/components/public-header'
 
 export function HomePage() {
   return <div className="public-home">
-    <header className="public-header">
-      <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight" aria-label="Cameron Blue home"><span className="public-monogram">cb.</span><span className="hidden sm:inline">cameronblue.org</span></Link>
-      <div className="flex items-center gap-4 sm:gap-6"><a href="#the-good-stuff" className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">The good stuff</a><a href="#reviews" className="text-sm text-muted-foreground hover:text-foreground">Reviews</a><Button className="h-11 gap-3 rounded-full px-5" render={<Link to="/sign-in" />}>Sign in<ArrowUpRight size={16} /></Button></div>
-    </header>
+    <PublicHeader />
     <main>
       <section className="public-hero">
         <div className="public-hero-copy"><p className="public-kicker"><span className="size-2 rounded-full bg-blue-600" />GOOD NAME. EVEN BETTER ENERGY.</p><h1>Cameron<br /><span>Blue.</span><Sparkles className="public-title-star" aria-hidden="true" /></h1><p className="public-intro">A pretty cool human.<br />An exceptionally good name for a website.</p><p className="public-description">Big curiosity. Good energy. A knack for making the everyday a little more interesting. Welcome to Cameron’s corner of the internet.</p><Button className="mt-8 h-12 rounded-full px-6" variant="outline" render={<a href="#the-good-stuff" />}>See what the hype is about<ArrowRight size={16} /></Button><div className="public-footnote"><span className="flex text-blue-600" aria-hidden="true">{[0, 1, 2, 3, 4].map(i => <Star key={i} size={13} fill="currentColor" />)}</span><span>Five stars. This website may be biased.</span></div></div>

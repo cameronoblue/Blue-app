@@ -47,4 +47,4 @@ Convex agent skills for common tasks can be installed by running
 
 - Guest reviews are an intentional public data exception: anonymous read/submit is allowed for reviews only, with server validation, rate limits, and no private identity fields in public responses. Only admins may hide/restore reviews. Other domain data remains private.
 
-- Basketball is the private /basketball sub-app. Frame-by-frame physics is ephemeral client state; completed runs and personal bests are stored only in Convex. Keep moving-rim scoring downward-only, timer bonuses milestone-based, and vibration optional/feature-detected. Pause on tab/window backgrounding.
+- Basketball is a public /basketball game listed under /public-apps, with no required sign-in. Guest game state is temporary; only authenticated users save scores. Frame-by-frame physics is ephemeral client state; completed runs and personal bests are stored only in Convex. Keep moving-rim scoring downward-only, timer bonuses milestone-based, and vibration optional/feature-detected. Pause on tab/window backgrounding.
