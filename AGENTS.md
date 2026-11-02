@@ -44,3 +44,5 @@ Convex agent skills for common tasks can be installed by running
 - Location logging is a per-event opt-in stored in Convex and editable in the create/edit form. Existing events default off. Persist the timestamp before requesting location; denied/unavailable location must not discard an entry. Location data is owner-only.
 
 - The root / is a public Cameron Blue homepage. The private dashboard is /apps; sign-in redirects there. Keep all domain data behind authenticated routes and server authorization.
+
+- Guest reviews are an intentional public data exception: anonymous read/submit is allowed for reviews only, with server validation, rate limits, and no private identity fields in public responses. Only admins may hide/restore reviews. Other domain data remains private.

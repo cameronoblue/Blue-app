@@ -78,3 +78,13 @@ Convex's built-in compiler subprocess cannot invoke the native TypeScript 7 comp
 ## Deployment
 
 Connected to personal team `cameron-blue`, project `blue-app`, development deployment `elated-chinchilla-392`. `.env.local` is ignored and must not be committed. Cloudflare Workers configuration is prepared for `blue-app` and `cameronblue.org`; see [CLOUDFLARE.md](./CLOUDFLARE.md) for build settings and production initialization. Production auth, the admin account, and hosting must be initialized separately from development.
+
+## Guest reviews
+
+The public homepage includes a Reviews section. Visitors can submit a 1-5 star rating, optional display name (defaults to Anonymous), and a 10-1,000 character comment without signing in or creating an account. Names are unverified and reviews publish immediately. Rendering treats review content as plain text.
+
+Settings includes admin-only Guest reviews controls to hide and restore submissions. Hidden reviews are excluded by the public query; browser/request identifiers are never returned by public queries. Existing private app data still requires authentication and ownership checks.
+
+Convex's rate-limiter component enforces one submission per hour per browser key and global token-bucket budgets of 10 per minute and 100 per day. A honeypot and idempotency keys deter basic bots and duplicate retries. Browser keys are a basic abuse deterrent, not verified identities; they can be reset by clearing storage. There is no CAPTCHA integration.
+
+The guest browser test runs against development with synthetic review text and hides the test submission afterward. Backend tests cover guest submission, bounds, retry deduplication, limits, and admin-only hide/restore access.

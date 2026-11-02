@@ -6,6 +6,10 @@ export const eventColor = v.union(v.literal('blue'), v.literal('violet'), v.lite
 export const logLocation = v.object({ latitude: v.number(), longitude: v.number(), accuracy: v.number(), capturedAt: v.number() })
 export default defineSchema({
   ...authTables,
+  reviews: defineTable({
+    displayName: v.string(), rating: v.number(), comment: v.string(),
+    hidden: v.boolean(), requestId: v.string(),
+  }).index('by_hidden', ['hidden']).index('by_requestId', ['requestId']),
   users: defineTable({
     ...authTables.users.validator.fields,
     username: v.optional(v.string()),

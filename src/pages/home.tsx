@@ -2,12 +2,13 @@ import { Link } from 'react-router'
 import { ArrowRight, ArrowUpRight, Sparkles, Lightbulb, Heart, MoveUpRight, Star, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { PublicReviews } from '@/components/reviews'
 
 export function HomePage() {
   return <div className="public-home">
     <header className="public-header">
       <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight" aria-label="Cameron Blue home"><span className="public-monogram">cb.</span><span className="hidden sm:inline">cameronblue.org</span></Link>
-      <div className="flex items-center gap-6"><a href="#the-good-stuff" className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">The good stuff</a><Button className="h-11 gap-3 rounded-full px-5" render={<Link to="/sign-in" />}>Sign in<ArrowUpRight size={16} /></Button></div>
+      <div className="flex items-center gap-4 sm:gap-6"><a href="#the-good-stuff" className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">The good stuff</a><a href="#reviews" className="text-sm text-muted-foreground hover:text-foreground">Reviews</a><Button className="h-11 gap-3 rounded-full px-5" render={<Link to="/sign-in" />}>Sign in<ArrowUpRight size={16} /></Button></div>
     </header>
     <main>
       <section className="public-hero">
@@ -21,6 +22,7 @@ export function HomePage() {
         { icon: Layers, number: '03', title: 'There’s always a next idea.', text: 'An internet corner with room to grow. Little tools, new experiments, and whatever sounds fun to build next.' },
       ].map(({ icon: Icon, number, title, text }) => <Card key={number} className="public-reason"><div className="flex items-center justify-between"><span className="public-reason-icon"><Icon size={23} strokeWidth={1.6} /></span><span className="text-xs text-muted-foreground/60">/{number}</span></div><h3 className="mt-6 text-lg font-semibold tracking-tight">{title}</h3><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text}</p></Card>)}</div></section>
       <section className="public-section pt-0"><div className="public-workspace"><div><p className="public-kicker text-blue-200">THERE’S MORE INSIDE</p><h2>A cool website.<br />A useful little workspace.</h2><p className="mt-4 max-w-md text-sm leading-relaxed text-blue-100">Behind the scenes: personal apps, everyday tools, and a place to keep track of the things that matter.</p></div><Button className="h-12 shrink-0 rounded-full bg-white px-6 text-blue-800 hover:bg-blue-50" render={<Link to="/sign-in" />}>Sign in to your apps<ArrowUpRight size={17} /></Button></div></section>
+      <PublicReviews />
     </main>
     <footer className="public-footer"><Link to="/" className="text-lg font-bold tracking-tight">cameron blue<span className="text-blue-600">.</span></Link><span className="text-xs text-muted-foreground">A little curiosity. A lot of blue.</span><a href="#" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">Back to top<ArrowUpRight size={13} /></a></footer>
   </div>
