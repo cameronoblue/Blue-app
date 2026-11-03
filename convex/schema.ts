@@ -7,19 +7,24 @@ export const logLocation = v.object({ latitude: v.number(), longitude: v.number(
 export const pollQuestion = v.object({
   prompt: v.string(), kind: v.union(v.literal('choice'), v.literal('text')),
   options: v.array(v.string()), correctIndex: v.optional(v.number()),
+  allowMultiple: v.optional(v.boolean()), correctIndices: v.optional(v.array(v.number())),
 })
 export const pollStatus = v.union(v.literal('draft'), v.literal('open'), v.literal('closed'))
+export const pollPhase = v.union(v.literal('lobby'), v.literal('question'), v.literal('locked'), v.literal('results'), v.literal('finished'))
+export const pollFormat = v.union(v.literal('bar'), v.literal('pie'), v.literal('donut'), v.literal('table'), v.literal('cloud'), v.literal('answers'))
 export default defineSchema({
   ...authTables,
   polls: defineTable({
     ownerId: v.id('users'), title: v.string(), description: v.string(), code: v.string(),
     questions: v.array(pollQuestion), status: pollStatus, resultsVisible: v.boolean(), participantCount: v.number(),
+    hosted: v.optional(v.boolean()), phase: v.optional(pollPhase), activeQuestion: v.optional(v.number()), revealed: v.optional(v.array(v.number())),
+    displayFormat: v.optional(pollFormat),
   }).index('by_ownerId', ['ownerId']).index('by_code', ['code']),
   pollParticipants: defineTable({ pollId: v.id('polls'), token: v.string() })
     .index('by_pollId_and_token', ['pollId', 'token']),
   pollResponses: defineTable({
     pollId: v.id('polls'), participantId: v.id('pollParticipants'), question: v.number(),
-    choice: v.optional(v.number()), text: v.optional(v.string()), hidden: v.boolean(),
+    choice: v.optional(v.number()), choices: v.optional(v.array(v.number())), text: v.optional(v.string()), hidden: v.boolean(),
   }).index('by_pollId_and_question', ['pollId', 'question'])
     .index('by_participantId_and_question', ['participantId', 'question']),
   basketballPracticeRuns: defineTable({ ownerId: v.id('users'), runId: v.string() })

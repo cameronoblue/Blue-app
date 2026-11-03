@@ -7,7 +7,8 @@ import { message } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { LivePollGuest } from '@/pages/live-poll'
+import { PollAnswerForm } from '@/components/poll-answer-form'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { PollResults, PollSelect } from '@/components/poll-results'
 
@@ -30,11 +31,12 @@ function GuestPoll({ code }: { code: string }) {
   const mine = useQuery(api.polls.myAnswers, { code, token })
   const join = useMutation(api.polls.join)
   const respond = useMutation(api.polls.respond)
-  const [joining, setJoining] = useState(false), [sending, setSending] = useState(false), [error, setError] = useState('')
-  const [index, setIndex] = useState(0), [choice, setChoice] = useState<number | null>(null), [text, setText] = useState('')
+  const [joining, setJoining] = useState(false), [error, setError] = useState('')
+  const [index, setIndex] = useState(0)
   const [resultIndex, setResultIndex] = useState(0)
   if (poll === undefined || mine === undefined) return <p role="status" className="p-8 text-center text-sm text-muted-foreground">Finding your poll…</p>
   if (!poll) return <div className="panel mx-auto max-w-lg space-y-5 p-8"><h1 className="text-2xl font-semibold">No poll found.</h1><p className="text-sm text-muted-foreground">Check the code with your host. Draft polls aren’t available until they’re published.</p><Button render={<Link to="/join" />}>Try another code<ArrowRight size={16} /></Button></div>
+  if (poll.hosted) return <LivePollGuest code={code} poll={poll} token={token} mine={mine} />
   const question = poll.questions[index], answered = mine?.answers.find(a => a.question === index)
   const complete = mine?.answers.length === poll.questions.length
   const nextUnanswered = (from: number) => poll.questions.findIndex((_, i) => i > from && !mine?.answers.some(a => a.question === i))
@@ -43,24 +45,19 @@ function GuestPoll({ code }: { code: string }) {
     setJoining(true); setError('')
     try { await join({ code, token }); try { localStorage.setItem(`blue-poll-${code}`, token) } catch { /* Session remains usable for this visit. */ } } catch (e) { setError(message(e)) } finally { setJoining(false) }
   }
-  async function send() {
-    if (sending || !question) return
-    setSending(true); setError('')
-    try { await respond({ code, token, question: index, ...(question.kind === 'choice' ? { choice: choice! } : { text }) }) } catch (e) { setError(message(e)) } finally { setSending(false) }
-  }
-  function move(value: number) { setIndex(value); setChoice(null); setText(''); setError('') }
+  function move(value: number) { setIndex(value); setError('') }
   return <div className="mx-auto max-w-3xl space-y-6"><Link to="/join" className="inline-flex min-h-9 items-center gap-2 text-xs text-muted-foreground"><ArrowLeft size={14} />Another poll</Link><div><p className="eyebrow">CODE {code} · {poll.status === 'open' ? 'LIVE NOW' : 'VOTING CLOSED'}</p><h1 className="page-title mt-3 break-words">{poll.title}</h1>{poll.description && <p className="page-subtitle whitespace-pre-wrap break-words">{poll.description}</p>}</div>
     <Tabs defaultValue="answer"><TabsList className="h-11 w-full"><TabsTrigger value="answer" className="h-9">Your answers</TabsTrigger><TabsTrigger value="results" className="h-9">Live results</TabsTrigger></TabsList>
       <TabsContent value="answer" className="mt-3"><div className="panel space-y-5 p-5 sm:p-8">
         {!mine ? <div className="space-y-5 py-4"><span className="app-icon"><BarChart3 size={26} /></span><h2 className="text-2xl font-semibold">{poll.status === 'open' ? 'Ready to weigh in?' : 'This poll has closed.'}</h2><p className="text-sm leading-relaxed text-muted-foreground">{poll.questions.length} questions. No name, email, or account needed. Your browser remembers your answers so you can return.</p><p className="text-xs leading-relaxed text-muted-foreground">Open-ended answers may be shown publicly when the host reveals results. Please avoid personal information.</p><Button className="h-12" disabled={joining || poll.status !== 'open'} onClick={() => void enter()}>{joining ? 'Joining…' : 'Join poll'}<ArrowRight size={16} /></Button></div> : <>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground"><span>{mine.answers.length} / {poll.questions.length} answered</span><span className="inline-flex items-center gap-1.5"><LockKeyhole size={13} />One answer per question</span></div><div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-[width]" style={{ width: `${mine.answers.length / poll.questions.length * 100}%` }} /></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground"><span>{mine.answers.length} / {poll.questions.length} answered</span><span className="inline-flex items-center gap-1.5"><LockKeyhole size={13} />One submission per question</span></div><div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-[width]" style={{ width: `${mine.answers.length / poll.questions.length * 100}%` }} /></div>
           {complete && <div role="status" className="rounded-xl bg-emerald-500/10 p-4"><p className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-300"><Check size={18} />You’re all done!</p><p className="mt-2 text-sm text-muted-foreground">Your answers are saved. Check Live results when the host reveals them.</p>{mine.quizTotal > 0 && <p className="mt-3 text-sm font-medium">{mine.correct === null ? 'Your quiz score will appear when results are revealed.' : `Quiz score: ${mine.correct} / ${mine.quizTotal}`}</p>}</div>}
           <PollSelect label="Answer question" value={String(index)} options={poll.questions.map((q, i) => ({ value: String(i), label: `${mine.answers.some(a => a.question === i) ? '✓ ' : ''}${i + 1}. ${q.prompt}` }))} onChange={value => move(Number(value))} />
           <div><p className="text-xs text-muted-foreground">Question {index + 1} of {poll.questions.length}</p><h2 className="mt-2 break-words text-xl font-semibold">{question.prompt}</h2></div>
-          {answered ? <div className="space-y-4"><div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4"><p className="mb-2 flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-300"><Check size={15} />Answer submitted</p><p className="whitespace-pre-wrap break-words text-sm">{question.kind === 'choice' ? question.options[answered.choice!] : answered.text}</p></div>{!complete && <Button className="h-11" onClick={() => { const next = nextUnanswered(index); move(next >= 0 ? next : poll.questions.findIndex((_, i) => !mine.answers.some(a => a.question === i))) }}>Next question<ArrowRight size={16} /></Button>}</div> : poll.status !== 'open' ? <p className="rounded-xl bg-muted p-5 text-sm text-muted-foreground">Voting is closed. The host can reopen it if needed.</p> : <form className="space-y-5" onSubmit={event => { event.preventDefault(); void send() }}>{question.kind === 'choice' ? <div className="grid gap-3">{question.options.map((option, i) => <Button key={i} variant="outline" aria-pressed={choice === i} className={`h-auto min-h-12 justify-start whitespace-normal p-4 text-left ${choice === i ? 'border-primary bg-primary/10 ring-1 ring-primary' : ''}`} disabled={sending} onClick={() => setChoice(i)}><span className="mr-2 grid size-7 shrink-0 place-items-center rounded-lg bg-muted text-xs">{String.fromCharCode(65 + i)}</span><span className="min-w-0 break-words">{option}</span>{choice === i && <Check size={16} className="ml-auto shrink-0" />}</Button>)}</div> : <div className="space-y-2"><Label htmlFor="poll-answer">Your answer</Label><Textarea id="poll-answer" value={text} onChange={e => setText(e.target.value)} maxLength={300} required disabled={sending} placeholder="What comes to mind?" /><p className="text-right text-xs text-muted-foreground">{text.length}/300</p></div>}<Button type="submit" className="h-12 w-full" disabled={sending || (question.kind === 'choice' ? choice === null : !text.trim())}>{sending ? 'Submitting…' : 'Submit answer'}<ArrowRight size={16} /></Button></form>}
+          {answered ? <div className="space-y-4"><div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4"><p className="mb-2 flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-300"><Check size={15} />Answer submitted</p><p className="whitespace-pre-wrap break-words text-sm">{question.kind === 'choice' ? (answered.choices ?? [answered.choice!]).map(i => question.options[i]).join(' · ') : answered.text}</p></div>{!complete && <Button className="h-11" onClick={() => { const next = nextUnanswered(index); move(next >= 0 ? next : poll.questions.findIndex((_, i) => !mine.answers.some(a => a.question === i))) }}>Next question<ArrowRight size={16} /></Button>}</div> : poll.status !== 'open' ? <p className="rounded-xl bg-muted p-5 text-sm text-muted-foreground">Voting is closed. The host can reopen it if needed.</p> : <PollAnswerForm key={index} question={question} onSubmit={(choices, text) => respond({ code, token, question: index, ...(question.kind === 'choice' ? { choices } : { text }) })} />}
         </>}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </div></TabsContent>
-      <TabsContent value="results" className="mt-3"><div className="panel space-y-5 p-5 sm:p-8"><PollSelect label="Results question" value={String(resultIndex)} options={poll.questions.map((q, i) => ({ value: String(i), label: `${i + 1}. ${q.prompt}` }))} onChange={value => setResultIndex(Number(value))} /><h2 className="break-words text-xl font-semibold">{poll.questions[resultIndex].prompt}</h2><PollResults key={resultIndex} code={code} index={resultIndex} question={poll.questions[resultIndex]} /></div></TabsContent>
+      <TabsContent value="results" className="mt-3"><div className="panel space-y-5 p-5 sm:p-8"><PollSelect label="Results question" value={String(resultIndex)} options={poll.questions.map((q, i) => ({ value: String(i), label: `${i + 1}. ${q.prompt}` }))} onChange={value => setResultIndex(Number(value))} /><h2 className="break-words text-xl font-semibold">{poll.questions[resultIndex].prompt}</h2><PollResults key={resultIndex} code={code} index={resultIndex} question={poll.questions[resultIndex]} audience /></div></TabsContent>
     </Tabs>
   </div>
 }

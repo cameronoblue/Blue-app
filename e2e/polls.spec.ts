@@ -37,6 +37,7 @@ test('host publishes a quiz, two guests answer, results update live and hide sec
   await expect(page).toHaveURL(/\/apps$/)
   await page.locator('.app-card').filter({ hasText: 'Polls & quizzes' }).click()
   await page.getByRole('link', { name: 'Create poll', exact: true }).click()
+  await page.getByRole('checkbox', { name: 'Host controls each question' }).uncheck()
   await page.getByLabel('Poll title', { exact: true }).fill(`Blue live test ${Date.now()}`)
   await page.getByLabel('Description (optional)').fill('A live browser test on development.')
   const first = page.getByRole('region', { name: 'Question 1', exact: true })

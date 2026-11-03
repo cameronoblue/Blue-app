@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Navigate, NavLink, Outlet, Link, useLocation, useRouteError } from 'react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useConvexAuth, useQuery } from 'convex/react'
-import { ArrowRight, ArrowUpRight, LayoutGrid, ListPlus, ChartNoAxesCombined, Settings2, LogOut, Layers, ShieldCheck, Sparkles, Gamepad2, BarChart3 } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, LayoutGrid, ListPlus, ChartNoAxesCombined, Settings2, LogOut, Layers, ShieldCheck, Sparkles, Gamepad2, BarChart3, PanelLeftClose, PanelLeftOpen, Menu } from 'lucide-react'
 import { api } from '@/lib/backend'
 import { apps } from '@/lib/apps'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
+import { useUiStore } from '@/stores/ui'
+import { WorkspaceNavigation } from '@/components/workspace-navigation'
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 
 const navigation = [
   { to: '/apps', label: 'Dashboard', short: 'Home', icon: LayoutGrid },
@@ -31,22 +34,26 @@ function Shell() {
   const me = useQuery(api.accounts.me)
   const location = useLocation()
   const { signOut } = useAuthActions()
+  const sidebarOpen = useUiStore(s => s.sidebarOpen)
+  const setSidebarOpen = useUiStore(s => s.setSidebarOpen)
+  const [mobileOpen, setMobileOpen] = useState(false)
   if (me === undefined) return <Loading />
   if (!me) return <div className="grid min-h-svh place-items-center p-6"><div className="panel max-w-sm space-y-4 p-8"><h1 className="text-xl font-semibold">Use your Blue account</h1><p className="text-muted-foreground">Sign out of the starter session, then use the username your administrator created.</p><Button onClick={() => void signOut()}>Go to sign in</Button></div></div>
   const active = navigation.find(n => n.to === location.pathname || (n.to !== '/' && location.pathname.startsWith(`${n.to}/`)))
-  return <div className="app-shell">
-    <aside className="desktop-sidebar">
-      <Brand to="/apps" />
-      <p className="mb-3 mt-12 px-3 text-[10px] font-semibold tracking-[.18em] text-muted-foreground">YOUR WORKSPACE</p>
-      <nav className="space-y-1.5" aria-label="Main navigation">{navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/apps'} className={({ isActive }) => `side-link ${isActive ? 'active' : ''}`}><Icon size={19} />{label}</NavLink>)}</nav>
-      <div className="mt-auto rounded-2xl border border-dashed p-4"><Sparkles size={19} className="mb-3 text-primary" /><p className="text-sm font-medium">A little more you.</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Your apps. Your tools.<br />Room for what comes next.</p></div>
-      <div className="mt-5 flex items-center gap-3 border-t pt-5"><div className="avatar">{me.username.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{me.username}</p><p className="text-xs capitalize text-muted-foreground">{me.role}</p></div><Button variant="ghost" size="icon" aria-label="Sign out" onClick={() => void signOut().catch(() => toast.error('Could not sign out.'))}><LogOut size={17} /></Button></div>
+  return <div className={`app-shell ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
+    <aside className="desktop-sidebar" aria-label="Workspace sidebar">
+      <div className="flex items-center justify-between gap-2">{sidebarOpen ? <Brand to="/apps" /> : <Link to="/apps" aria-label="Blue dashboard" className="brand-icon"><Layers size={21} /></Link>}{sidebarOpen && <Button variant="ghost" size="icon" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)}><PanelLeftClose size={18} /></Button>}</div>
+      {!sidebarOpen && <Button variant="ghost" size="icon" className="mt-4 self-center" aria-label="Open sidebar" onClick={() => setSidebarOpen(true)}><PanelLeftOpen size={18} /></Button>}
+      <div className="mt-8"><WorkspaceNavigation collapsed={!sidebarOpen} /></div>
+      {sidebarOpen && <div className="mt-auto rounded-2xl border border-dashed p-4"><Sparkles size={19} className="mb-3 text-primary" /><p className="text-sm font-medium">A little more you.</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Your apps. Your tools.<br />Room for what comes next.</p></div>}
+      <div className={`mt-auto flex items-center gap-3 border-t pt-5 ${sidebarOpen ? 'mt-5!' : 'flex-col'}`}><div className="avatar">{me.username.slice(0, 2).toUpperCase()}</div>{sidebarOpen && <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{me.username}</p><p className="text-xs capitalize text-muted-foreground">{me.role}</p></div>}<Button variant="ghost" size="icon" aria-label="Sign out" onClick={() => void signOut().catch(() => toast.error('Could not sign out.'))}><LogOut size={17} /></Button></div>
     </aside>
+    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}><SheetContent side="left" className="max-w-80 p-5"><SheetTitle>Blue workspace</SheetTitle><SheetDescription>Your apps and settings</SheetDescription><WorkspaceNavigation onNavigate={() => setMobileOpen(false)} /><Button variant="outline" className="mt-auto h-11" onClick={() => void signOut()}>Sign out<LogOut size={16} /></Button></SheetContent></Sheet>
     <div className="min-w-0 flex-1">
-      <header className="app-header"><div className="md:hidden"><Brand to="/apps" /></div><div className="hidden text-sm text-muted-foreground md:block">Workspace <span className="mx-3 text-border">/</span><span className="text-foreground">{active?.label ?? 'Blue app'}</span></div><div className="flex items-center gap-3"><span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex"><span className="size-1.5 rounded-full bg-emerald-500" />Personal workspace</span><Link to="/settings" className="avatar size-9 text-xs" aria-label="Account settings">{me.username.slice(0, 2).toUpperCase()}</Link></div></header>
+      <header className="app-header"><div className="flex items-center gap-3 md:hidden"><Button variant="ghost" size="icon" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu size={20} /></Button><Brand to="/apps" /></div><div className="hidden text-sm text-muted-foreground md:block">Workspace <span className="mx-3 text-border">/</span><span className="text-foreground">{active?.label ?? 'Blue app'}</span></div><div className="flex items-center gap-3"><span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex"><span className="size-1.5 rounded-full bg-emerald-500" />Personal workspace</span><Link to="/settings" className="avatar size-9 text-xs" aria-label="Account settings">{me.username.slice(0, 2).toUpperCase()}</Link></div></header>
       <main className="main-content"><Outlet /></main>
     </div>
-    <nav className="mobile-nav" aria-label="Mobile navigation">{navigation.map(({ to, short, icon: Icon }) => <NavLink key={to} to={to} end={to === '/apps'} className={({ isActive }) => `mobile-link ${isActive ? 'active' : ''}`}><Icon size={21} strokeWidth={1.8} /><span>{short}</span></NavLink>)}</nav>
+    <nav className="mobile-nav" aria-label="Mobile navigation"><NavLink to="/apps" end className={({ isActive }) => `mobile-link ${isActive ? 'active' : ''}`}><LayoutGrid size={21} /><span>Home</span></NavLink><Button variant="ghost" className="mobile-link h-auto" onClick={() => setMobileOpen(true)}><Layers size={21} /><span>Apps</span></Button><NavLink to="/settings" className={({ isActive }) => `mobile-link ${isActive ? 'active' : ''}`}><Settings2 size={21} /><span>Settings</span></NavLink></nav>
   </div>
 }
 function Brand({ to = '/' }: { to?: string }) { return <Link to={to} className="flex items-center gap-2.5"><span className="brand-icon"><Layers size={21} strokeWidth={2.2} /></span><span className="text-xl font-bold tracking-tight">blue<span className="text-primary">.</span></span></Link> }

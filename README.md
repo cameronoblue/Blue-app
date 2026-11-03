@@ -115,3 +115,15 @@ Multiple-choice results support live bar, pie, donut, and table views. Open-ende
 Each session supports 1,000 participants, with a per-session join token bucket of 120 per minute. All response reads are indexed and bounded to that session limit. The host list shows the newest 100 sessions. Anonymous participation is an intentional public data exception; private logs and account data stay protected. Poll content and responses persist in Convex, while editor drafts and presentation controls are temporary client state.
 
 The public header has light/dark/system theme controls. The homepage, reason cards, review form and review cards follow the same next-themes preference as Settings.
+
+### Host-led sessions
+
+New polls default to host-led mode. Uncheck **Host controls each question** for a self-paced poll. Existing published polls remain self-paced; all new schema fields are optional for compatibility.
+
+Publish opens a lobby. The owning admin starts the first question, locks/reopens answers, reveals results, advances to the next question, and finishes the session. Guests automatically follow the current phase and never receive future question text or options. Convex rejects submissions outside the current open question, and stale host commands include the expected question index to prevent accidental advancement from another tab. Final quiz grades cover only questions actually revealed in the session.
+
+**Open audience screen** opens `/present/CODE` in a separate window. Share or project that window, keeping the private host control room on your own device. The audience view displays a lobby QR/code, current question, answer progress, revealed charts, and a completion screen, with a fullscreen option. It has no host controls. Even when opened by the signed-in owner, its queries enforce public result hiding. The host's current result format syncs to this screen.
+
+Multiple-choice questions may **Accept multiple answers**. A quiz can mark multiple correct options; credit requires an exact match to the correct set. Opinion polls can allow multiple selections without an answer key. Bar percentages are per respondent; pie/donut percentages are shares of selections. Retries with the same selections in a different order remain idempotent.
+
+Workspace navigation groups Log, Games, and Polls & quizzes under **Apps**. The desktop sidebar toggles between full and icon-only views; Apps expands on mouse hover, keyboard activation, or touch. Mobile uses an accessible navigation drawer. Sidebar state stays ephemeral in Zustand, while synchronized live-session state belongs to Convex.

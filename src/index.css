@@ -174,6 +174,10 @@
   .app-shell { @apply flex min-h-svh; }
   .brand-icon { @apply grid size-9 place-items-center rounded-xl bg-primary text-white shadow-sm; }
   .desktop-sidebar { @apply fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r bg-card px-5 py-8 md:flex; }
+  .sidebar-collapsed .desktop-sidebar { @apply w-20 items-stretch px-3; }
+  .sidebar-collapsed .app-header, .sidebar-collapsed .main-content { @apply md:ml-20; }
+  .desktop-sidebar, .app-header, .main-content { transition: margin 180ms ease, width 180ms ease; }
+  @media (prefers-reduced-motion: reduce) { .desktop-sidebar, .app-header, .main-content { transition: none; } }
   .side-link { @apply flex h-12 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground; }
   .side-link.active { @apply bg-primary/9 text-primary; }
   .avatar { @apply flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary; }

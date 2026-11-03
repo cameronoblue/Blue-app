@@ -7,6 +7,6 @@ type UiState = {
 }
 
 export const useUiStore = create<UiState>((set) => ({
-  sidebarOpen: false,
+  sidebarOpen: true,
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
 }))

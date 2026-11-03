@@ -3,6 +3,7 @@ import { RootLayout, ProtectedLayout, Dashboard, SignIn, NotFound, RouteError } 
 
 export const router = createBrowserRouter([{ element: <RootLayout />, errorElement: <RouteError />, children: [
   { index: true, lazy: async () => ({ Component: (await import('./pages/home')).HomePage }) },
+  { path: 'present/:code', lazy: async () => ({ Component: (await import('./pages/live-poll')).PollAudiencePage }) },
   { path: 'sign-in', element: <SignIn /> },
   { lazy: async () => ({ Component: (await import('./pages/public-apps')).PublicAppsLayout }), children: [
     { path: 'games', lazy: async () => ({ Component: (await import('./pages/games')).GamesPage }) },
