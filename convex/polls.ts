@@ -10,7 +10,7 @@ import { requireAdmin } from './lib/access'
 const limiter = new RateLimiter(components.rateLimiter, {
   pollJoin: { kind: 'token bucket', rate: 120, period: MINUTE, capacity: 120 },
 })
-const publicQuestion = v.object({ prompt: v.string(), kind: v.union(v.literal('choice'), v.literal('text')), options: v.array(v.string()), allowMultiple: v.optional(v.boolean()) })
+const publicQuestion = v.object({ prompt: v.string(), kind: v.union(v.literal('choice'), v.literal('checkbox'), v.literal('text')), options: v.array(v.string()), allowMultiple: v.optional(v.boolean()), allowMultipleSubmissions: v.optional(v.boolean()) })
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const codeOf = (value: string) => value.toUpperCase().replace(/[\s-]/g, '')
 async function owned(ctx: QueryCtx | MutationCtx, id: Id<'polls'>) {
@@ -35,15 +35,15 @@ function clean(title: string, description: string, questions: Doc<'polls'>['ques
   const cleaned = questions.map(q => {
     const prompt = q.prompt.trim(), options = q.options.map(o => o.trim())
     if (!prompt || prompt.length > 300) throw new ConvexError('Each question needs 1–300 characters.')
-    if (q.kind === 'choice') {
+    if (q.kind !== 'text') {
       if (options.length < 2 || options.length > 12 || options.some(o => !o || o.length > 100) || new Set(options.map(o => o.toLocaleLowerCase())).size !== options.length) throw new ConvexError('Use 2–12 different options, up to 100 characters each.')
       if (q.correctIndex !== undefined && (!Number.isInteger(q.correctIndex) || q.correctIndex < 0 || q.correctIndex >= options.length)) throw new ConvexError('Choose a valid correct answer.')
       const keys = keyFor(q)
-      if (keys.length > options.length || new Set(keys).size !== keys.length || keys.some(i => !Number.isInteger(i) || i < 0 || i >= options.length) || (!q.allowMultiple && keys.length > 1)) throw new ConvexError('Choose valid, distinct correct answers for this question type.')
+      if (keys.length > options.length || new Set(keys).size !== keys.length || keys.some(i => !Number.isInteger(i) || i < 0 || i >= options.length) || (!(q.kind === 'checkbox' || q.allowMultiple) && keys.length > 1)) throw new ConvexError('Choose valid, distinct correct answers for this question type.')
       if (q.correctIndex !== undefined && q.correctIndices !== undefined) throw new ConvexError('Use one answer key format.')
       return { ...q, prompt, options }
     }
-    return { prompt, kind: q.kind, options: [] }
+    return { prompt, kind: q.kind, options: [], ...(q.allowMultipleSubmissions === undefined ? {} : { allowMultipleSubmissions: q.allowMultipleSubmissions }) }
   })
   return { title, description, questions: cleaned }
 }
@@ -105,10 +105,10 @@ export const lookup = query({ args: { code: v.string() }, returns: v.union(v.nul
   const poll = await byCode(ctx, code)
   if (!poll || poll.status === 'draft') return null
   const phase = poll.phase ?? 'lobby', activeQuestion = poll.activeQuestion ?? 0
-  const answeredCount = poll.hosted && phase !== 'lobby' && phase !== 'finished' ? (await ctx.db.query('pollResponses').withIndex('by_pollId_and_question', q => q.eq('pollId', poll._id).eq('question', activeQuestion)).take(1001)).length : 0
+  const answeredCount = poll.hosted && phase !== 'lobby' && phase !== 'finished' ? new Set((await ctx.db.query('pollResponses').withIndex('by_pollId_and_question', q => q.eq('pollId', poll._id).eq('question', activeQuestion)).take(5001)).map(r => r.participantId)).size : 0
   // Future questions and answer keys never leave the server during hosted play.
   const questions = poll.hosted ? (phase === 'lobby' || phase === 'finished' ? [] : [poll.questions[activeQuestion]]) : poll.questions
-  return { title: poll.title, description: poll.description, status: poll.status, resultsVisible: poll.resultsVisible, hosted: poll.hosted ?? false, phase, activeQuestion, questionCount: poll.questions.length, participantCount: poll.participantCount, answeredCount, displayFormat: poll.displayFormat, questions: questions.map(({ prompt, kind, options, allowMultiple }) => ({ prompt, kind, options, ...(allowMultiple === undefined ? {} : { allowMultiple }) })) }
+  return { title: poll.title, description: poll.description, status: poll.status, resultsVisible: poll.resultsVisible, hosted: poll.hosted ?? false, phase, activeQuestion, questionCount: poll.questions.length, participantCount: poll.participantCount, answeredCount, displayFormat: poll.displayFormat, questions: questions.map(({ prompt, kind, options, allowMultiple, allowMultipleSubmissions }) => ({ prompt, kind, options, ...(allowMultiple === undefined ? {} : { allowMultiple }), ...(allowMultipleSubmissions === undefined ? {} : { allowMultipleSubmissions }) })) }
 } })
 export const join = mutation({ args: { code: v.string(), token: v.string() }, returns: v.null(), handler: async (ctx, { code, token }) => {
   if (!uuid.test(token)) throw new ConvexError('Please reload and try again.')
@@ -125,17 +125,21 @@ export const join = mutation({ args: { code: v.string(), token: v.string() }, re
   return null
 } })
 const answer = v.object({ question: v.number(), choice: v.optional(v.number()), choices: v.optional(v.array(v.number())), text: v.optional(v.string()) })
-export const myAnswers = query({ args: { code: v.string(), token: v.string() }, returns: v.union(v.null(), v.object({ answers: v.array(answer), correct: v.union(v.number(), v.null()), quizTotal: v.number() })), handler: async (ctx, { code, token }) => {
+export const myAnswers = query({ args: { code: v.string(), token: v.string() }, returns: v.union(v.null(), v.object({ answers: v.array(answer), correct: v.union(v.number(), v.null()), quizTotal: v.number(), submissionCounts: v.array(v.number()) })), handler: async (ctx, { code, token }) => {
   const poll = await byCode(ctx, code)
   if (!poll || poll.status === 'draft' || !uuid.test(token)) return null
   const participant = await ctx.db.query('pollParticipants').withIndex('by_pollId_and_token', q => q.eq('pollId', poll._id).eq('token', token)).unique()
   if (!participant) return null
-  const answers = await ctx.db.query('pollResponses').withIndex('by_participantId_and_question', q => q.eq('participantId', participant._id)).take(20)
+  const rows = await ctx.db.query('pollResponses').withIndex('by_participantId_and_question', q => q.eq('participantId', participant._id)).take(401)
+  const latest = new Map<number, typeof rows[number]>()
+  const submissionCounts = poll.questions.map(() => 0)
+  for (const row of rows) { latest.set(row.question, row); submissionCounts[row.question]++ }
+  const answers = [...latest.values()]
   const quizTotal = poll.questions.filter((q, i) => keyFor(q).length > 0 && (!poll.hosted || (poll.revealed ?? []).includes(i))).length
   const canGrade = poll.hosted ? poll.phase === 'finished' && poll.resultsVisible : poll.resultsVisible
-  return { answers: answers.map(({ question, choice, choices, text }) => ({ question, choice, choices, text })), quizTotal, correct: canGrade ? answers.filter(a => { const keys = keyFor(poll.questions[a.question]); return keys.length > 0 && same(picksFor(a), keys) }).length : null }
+  return { submissionCounts, answers: answers.map(({ question, choice, choices, text }) => ({ question, choice, choices, text })), quizTotal, correct: canGrade ? answers.filter(a => { const keys = keyFor(poll.questions[a.question]); return keys.length > 0 && same(picksFor(a), keys) }).length : null }
 } })
-export const respond = mutation({ args: { code: v.string(), token: v.string(), ...answer.fields }, returns: v.null(), handler: async (ctx, args) => {
+export const respond = mutation({ args: { code: v.string(), token: v.string(), requestId: v.optional(v.string()), ...answer.fields }, returns: v.null(), handler: async (ctx, args) => {
   const poll = await byCode(ctx, args.code)
   if (!poll || poll.status !== 'open') throw new ConvexError('This poll is not accepting answers.')
   if (!uuid.test(args.token)) throw new ConvexError('Join this poll first.')
@@ -145,24 +149,34 @@ export const respond = mutation({ args: { code: v.string(), token: v.string(), .
   if (!Number.isInteger(args.question) || !q) throw new ConvexError('Invalid question.')
   if (poll.hosted && (poll.phase !== 'question' || args.question !== (poll.activeQuestion ?? 0))) throw new ConvexError('Wait for the host to open this question.')
   let choice: number | undefined, text: string | undefined, choices: number[] | undefined
-  if (q.kind === 'choice') {
+  if (q.kind !== 'text') {
     const selected = args.choices ?? (args.choice === undefined ? [] : [args.choice])
-    if ((args.choice !== undefined && args.choices !== undefined) || !selected.length || selected.length > q.options.length || new Set(selected).size !== selected.length || selected.some(i => !Number.isInteger(i) || i < 0 || i >= q.options.length) || (!q.allowMultiple && selected.length !== 1) || args.text !== undefined) throw new ConvexError('Choose valid, distinct options.')
+    if ((args.choice !== undefined && args.choices !== undefined) || !selected.length || selected.length > q.options.length || new Set(selected).size !== selected.length || selected.some(i => !Number.isInteger(i) || i < 0 || i >= q.options.length) || (!(q.kind === 'checkbox' || q.allowMultiple) && selected.length !== 1) || args.text !== undefined) throw new ConvexError('Choose valid, distinct options.')
     choices = [...selected].sort((a, b) => a - b)
     choice = choices.length === 1 ? choices[0] : undefined
   } else {
     text = args.text?.trim()
     if (!text || text.length > 300 || (args.choice !== undefined || args.choices !== undefined)) throw new ConvexError('Write an answer from 1 to 300 characters.')
   }
-  const existing = await ctx.db.query('pollResponses').withIndex('by_participantId_and_question', i => i.eq('participantId', participant._id).eq('question', args.question)).unique()
-  if (existing) {
-    if (same(picksFor(existing), choices ?? []) && existing.text === text) return null
+  const previous = await ctx.db.query('pollResponses').withIndex('by_participantId_and_question', i => i.eq('participantId', participant._id).eq('question', args.question)).order('desc').take(21)
+  if (args.requestId !== undefined && !uuid.test(args.requestId)) throw new ConvexError('Please reload and try again.')
+  const retry = args.requestId ? previous.find(r => r.requestId === args.requestId) : undefined
+  if (retry) {
+    if (same(picksFor(retry), choices ?? []) && retry.text === text) return null
+    throw new ConvexError('This submission ID has already been used. Submit a new answer instead.')
+  }
+  if (!q.allowMultipleSubmissions && previous.length) {
+    if (same(picksFor(previous[0]), choices ?? []) && previous[0].text === text) return null
     throw new ConvexError('Your answer has already been submitted.')
   }
-  await ctx.db.insert('pollResponses', { pollId: poll._id, participantId: participant._id, question: args.question, choice, choices, text, hidden: false })
+  if (q.allowMultipleSubmissions && !args.requestId) throw new ConvexError('A submission ID is required. Please reload and try again.')
+  if (previous.length >= 20) throw new ConvexError('You have reached the 20-submission limit for this question.')
+  const room = await ctx.db.query('pollResponses').withIndex('by_pollId_and_question', i => i.eq('pollId', poll._id).eq('question', args.question)).take(5001)
+  if (room.length >= 5000) throw new ConvexError('This question has reached its 5,000-submission limit.')
+  await ctx.db.insert('pollResponses', { pollId: poll._id, participantId: participant._id, question: args.question, choice, choices, text, requestId: args.requestId, hidden: false })
   return null
 } })
-const results = v.object({ total: v.number(), counts: v.array(v.number()), texts: v.array(v.object({ text: v.string(), count: v.number() })), responses: v.array(v.object({ id: v.id('pollResponses'), text: v.string(), hidden: v.boolean() })), correctIndex: v.union(v.number(), v.null()), correctIndices: v.array(v.number()) })
+const results = v.object({ total: v.number(), participants: v.number(), counts: v.array(v.number()), texts: v.array(v.object({ text: v.string(), count: v.number() })), responses: v.array(v.object({ id: v.id('pollResponses'), text: v.string(), hidden: v.boolean() })), correctIndex: v.union(v.number(), v.null()), correctIndices: v.array(v.number()) })
 export const resultsForQuestion = query({ args: { code: v.string(), question: v.number(), audience: v.optional(v.boolean()) }, returns: v.union(v.null(), results), handler: async (ctx, { code, question, audience }) => {
   const poll = await byCode(ctx, code)
   if (!poll || !Number.isInteger(question) || !poll.questions[question]) return null
@@ -174,12 +188,12 @@ export const resultsForQuestion = query({ args: { code: v.string(), question: v.
     isOwner = !audience && user?.role === 'admin' && poll.ownerId === id
   }
   if (!isOwner && (poll.status === 'draft' || !visibleResult(poll, question))) return null
-  const rows = await ctx.db.query('pollResponses').withIndex('by_pollId_and_question', i => i.eq('pollId', poll._id).eq('question', question)).take(1001)
+  const rows = await ctx.db.query('pollResponses').withIndex('by_pollId_and_question', i => i.eq('pollId', poll._id).eq('question', question)).take(5001)
   const visible = rows.filter(r => !r.hidden)
   const q = poll.questions[question], counts = q.options.map((_, i) => visible.filter(r => picksFor(r).includes(i)).length)
   const texts = new Map<string, number>()
   for (const row of visible) if (row.text) texts.set(row.text, (texts.get(row.text) ?? 0) + 1)
-  return { total: visible.length, counts, texts: [...texts].map(([text, count]) => ({ text, count })), responses: isOwner ? rows.filter(r => r.text !== undefined).map(r => ({ id: r._id, text: r.text!, hidden: r.hidden })) : [], correctIndex: keyFor(q).length === 1 ? keyFor(q)[0] : null, correctIndices: keyFor(q) }
+  return { total: visible.length, participants: new Set(rows.map(r => r.participantId)).size, counts, texts: [...texts].map(([text, count]) => ({ text, count })), responses: isOwner ? rows.filter(r => r.text !== undefined).map(r => ({ id: r._id, text: r.text!, hidden: r.hidden })) : [], correctIndex: keyFor(q).length === 1 ? keyFor(q)[0] : null, correctIndices: keyFor(q) }
 } })
 export const moderate = mutation({ args: { id: v.id('pollResponses'), hidden: v.boolean() }, returns: v.null(), handler: async (ctx, { id, hidden }) => {
   const response = await ctx.db.get(id)

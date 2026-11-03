@@ -196,3 +196,47 @@ it('finishing early grades only questions the host actually presented', async ()
   expect(await t.query(api.polls.myAnswers, { code, token })).toMatchObject({ correct: 1, quizTotal: 1 })
   expect(await t.query(api.polls.resultsForQuestion, { code, question: 1 })).toBeNull()
 })
+it('counts distinct submissions separately, deduplicates retries, and grades the latest submission only', async () => {
+  const { t, admin } = await fixture()
+  const id = await admin.mutation(api.polls.create, { title: 'Submissions and checkboxes', description: '', questions: [
+    { prompt: 'Choose one', kind: 'choice', options: ['A', 'B'], correctIndices: [0], allowMultipleSubmissions: true },
+    { prompt: 'Check both', kind: 'checkbox', options: ['A', 'B', 'C'], correctIndices: [0, 1] },
+    { prompt: 'Add ideas', kind: 'text', options: [], allowMultipleSubmissions: true },
+  ] })
+  const { code } = await admin.query(api.polls.get, { id })
+  await admin.mutation(api.polls.control, { id, status: 'open', resultsVisible: true })
+  const token = crypto.randomUUID(); await t.mutation(api.polls.join, { code, token })
+  await t.mutation(api.polls.respond, { code, token, question: 0, choices: [1], requestId: crypto.randomUUID() })
+  const correct = { code, token, question: 0, choices: [0], requestId: crypto.randomUUID() }
+  await t.mutation(api.polls.respond, correct)
+  await t.mutation(api.polls.respond, correct)
+  await expect(t.mutation(api.polls.respond, { ...correct, choices: [1] })).rejects.toThrow(/already been used/)
+  await expect(t.mutation(api.polls.respond, { code, token, question: 0, choices: [0, 1], requestId: crypto.randomUUID() })).rejects.toThrow(/valid/)
+  await t.mutation(api.polls.respond, { code, token, question: 1, choices: [1, 0] })
+  await expect(t.mutation(api.polls.respond, { code, token, question: 1, choices: [0] })).rejects.toThrow(/already/)
+  const idea = { code, token, question: 2, text: 'More blue', requestId: crypto.randomUUID() }
+  await t.mutation(api.polls.respond, idea)
+  await t.mutation(api.polls.respond, idea)
+  await t.mutation(api.polls.respond, { ...idea, requestId: crypto.randomUUID() })
+  expect(await t.query(api.polls.resultsForQuestion, { code, question: 0 })).toMatchObject({ total: 2, participants: 1, counts: [1, 1] })
+  expect(await t.query(api.polls.resultsForQuestion, { code, question: 2 })).toMatchObject({ total: 2, participants: 1, texts: [{ text: 'More blue', count: 2 }] })
+  const mine = (await t.query(api.polls.myAnswers, { code, token }))!
+  expect(mine.answers).toHaveLength(3)
+  expect(mine).toMatchObject({ correct: 2, quizTotal: 2, submissionCounts: [2, 1, 2] })
+  expect(mine.answers.find(a => a.question === 0)?.choices).toEqual([0])
+  expect((await t.query(api.polls.lookup, { code }))?.questions[1].kind).toBe('checkbox')
+})
+it('requires submission IDs for repeat-enabled questions and enforces per-question limits and host locks', async () => {
+  const { t, admin } = await fixture()
+  const id = await admin.mutation(api.polls.create, { title: 'Repeat limits', description: '', hosted: true, questions: [{ prompt: 'Ideas?', kind: 'text', options: [], allowMultipleSubmissions: true }] })
+  const { code } = await admin.query(api.polls.get, { id })
+  await admin.mutation(api.polls.control, { id, status: 'open' })
+  const token = crypto.randomUUID(); await t.mutation(api.polls.join, { code, token })
+  await admin.mutation(api.polls.advance, { id, question: 0, action: 'start' })
+  await expect(t.mutation(api.polls.respond, { code, token, question: 0, text: 'An idea' })).rejects.toThrow(/submission ID is required/)
+  for (let i = 0; i < 20; i++) await t.mutation(api.polls.respond, { code, token, question: 0, text: `Idea ${i}`, requestId: crypto.randomUUID() })
+  await expect(t.mutation(api.polls.respond, { code, token, question: 0, text: 'Too many', requestId: crypto.randomUUID() })).rejects.toThrow(/20-submission/)
+  expect((await t.query(api.polls.lookup, { code }))?.answeredCount).toBe(1)
+  await admin.mutation(api.polls.advance, { id, question: 0, action: 'lock' })
+  await expect(t.mutation(api.polls.respond, { code, token, question: 0, text: 'Late', requestId: crypto.randomUUID() })).rejects.toThrow(/Wait for the host/)
+})
