@@ -217,18 +217,18 @@
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 
 @layer components {
-  .public-home { @apply min-h-svh bg-[#f7f8f5] text-[#18243a]; }
+  .public-home { @apply min-h-svh bg-[#f7f8f5] text-[#18243a] dark:bg-background dark:text-foreground; }
   .public-header { @apply mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5 sm:px-10; }
   .public-monogram { @apply grid size-11 place-items-center rounded-full bg-[#315dd0] text-lg font-bold text-white; }
-  .public-kicker { @apply flex items-center gap-2 text-[10px] font-semibold tracking-[.16em] text-[#667085]; }
+  .public-kicker { @apply flex items-center gap-2 text-[10px] font-semibold tracking-[.16em] text-[#667085] dark:text-muted-foreground; }
   .public-hero { @apply mx-auto grid max-w-7xl items-center gap-12 px-6 pt-10 pb-16 sm:px-10 sm:pt-14 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:pt-16 lg:pb-24; }
   .public-hero-copy { @apply relative; }
   .public-hero h1 { @apply relative mt-6 w-fit text-[clamp(5rem,12vw,10rem)] leading-[.88] font-semibold tracking-[-.075em]; }
-  .public-hero h1 > span { @apply text-[#315dd0]; }
+  .public-hero h1 > span { @apply text-[#315dd0] dark:text-blue-400; }
   .public-title-star { @apply absolute -right-12 bottom-4 size-9 rotate-12 text-[#315dd0] sm:right-6 sm:bottom-6 sm:size-14; }
   .public-intro { @apply mt-8 text-xl leading-snug font-medium tracking-tight sm:text-2xl; }
-  .public-description { @apply mt-5 max-w-96 text-sm leading-7 text-[#667085]; }
-  .public-footnote { @apply mt-6 flex flex-wrap items-center gap-2.5 text-[10px] text-[#667085]; }
+  .public-description { @apply mt-5 max-w-96 text-sm leading-7 text-[#667085] dark:text-muted-foreground; }
+  .public-footnote { @apply mt-6 flex flex-wrap items-center gap-2.5 text-[10px] text-[#667085] dark:text-muted-foreground; }
   .public-art { @apply relative mx-auto aspect-[.96] w-full max-w-lg overflow-hidden rounded-[28px] bg-[#315dd0] text-white; background-image: linear-gradient(150deg,#2449ab,#4778e9); }
   .public-portrait { @apply absolute inset-0 h-full w-full object-cover; object-position: 50% 45%; }
   .public-photo-shade { @apply pointer-events-none absolute inset-0; background: linear-gradient(transparent 65%, rgb(10 20 40 / .7)); }
@@ -239,15 +239,15 @@
   .public-art-spark { @apply absolute top-[17%] right-[13%] text-6xl text-[#c7ddff]; }
   .public-art-sticker { @apply absolute right-5 top-6 inline-flex rotate-[-7deg] items-center gap-2 rounded-full bg-[#e4edb9] px-4 py-3 text-xs font-medium text-[#263b38] shadow-xl; }
   .public-art-bottom { @apply absolute right-7 bottom-7 left-7 flex items-end justify-between border-t border-white/25 pt-5 text-[9px] tracking-[.2em] text-blue-100; }
-  .public-ribbon { @apply flex flex-wrap items-center justify-around gap-5 border-y border-[#dfe4dc] bg-[#eef0e9] px-6 py-5 text-[9px] font-semibold tracking-[.14em] text-[#617064] sm:text-[11px]; }
+  .public-ribbon { @apply flex flex-wrap items-center justify-around gap-5 border-y border-[#dfe4dc] bg-[#eef0e9] px-6 py-5 text-[9px] font-semibold tracking-[.14em] text-[#617064] sm:text-[11px] dark:border-border dark:bg-muted/50 dark:text-muted-foreground; }
   .public-section { @apply mx-auto max-w-7xl px-6 py-16 sm:px-10 lg:py-24; }
   .public-section h2 { @apply mt-3 text-3xl leading-tight font-medium tracking-[-.04em] sm:text-4xl; }
-  .public-reason { @apply gap-0 rounded-2xl border-[#e1e5df] bg-[#fdfdfb] p-6 text-[#18243a] shadow-none sm:p-7; }
-  .public-reason .text-muted-foreground { @apply text-[#667085]; }
-  .public-reason-icon { @apply grid size-12 place-items-center rounded-2xl bg-[#eaf0ff] text-[#315dd0]; }
+  .public-reason { @apply gap-0 rounded-2xl border-[#e1e5df] bg-[#fdfdfb] p-6 text-[#18243a] shadow-none sm:p-7 dark:border-border dark:bg-card dark:text-card-foreground; }
+  .public-reason .text-muted-foreground { @apply text-[#667085] dark:text-muted-foreground; }
+  .public-reason-icon { @apply grid size-12 place-items-center rounded-2xl bg-[#eaf0ff] text-[#315dd0] dark:text-blue-400 dark:bg-blue-500/15; }
   .public-workspace { @apply flex flex-col items-start justify-between gap-8 rounded-[24px] bg-[#284fb6] p-7 text-white sm:p-10 lg:flex-row lg:items-center; }
-  .public-footer { @apply mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-5 border-t border-[#e1e5df] px-6 py-7 sm:px-10; }
-  .public-home .text-muted-foreground { @apply text-[#667085]; }
+  .public-footer { @apply mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-5 border-t border-[#e1e5df] px-6 py-7 sm:px-10 dark:border-border; }
+  .public-home .text-muted-foreground { @apply text-[#667085] dark:text-muted-foreground; }
   .public-home .public-workspace .public-kicker { @apply text-blue-200; }
 }
 

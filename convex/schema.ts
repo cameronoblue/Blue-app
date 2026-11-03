@@ -4,8 +4,24 @@ import { v } from 'convex/values'
 
 export const eventColor = v.union(v.literal('blue'), v.literal('violet'), v.literal('mint'), v.literal('amber'), v.literal('rose'))
 export const logLocation = v.object({ latitude: v.number(), longitude: v.number(), accuracy: v.number(), capturedAt: v.number() })
+export const pollQuestion = v.object({
+  prompt: v.string(), kind: v.union(v.literal('choice'), v.literal('text')),
+  options: v.array(v.string()), correctIndex: v.optional(v.number()),
+})
+export const pollStatus = v.union(v.literal('draft'), v.literal('open'), v.literal('closed'))
 export default defineSchema({
   ...authTables,
+  polls: defineTable({
+    ownerId: v.id('users'), title: v.string(), description: v.string(), code: v.string(),
+    questions: v.array(pollQuestion), status: pollStatus, resultsVisible: v.boolean(), participantCount: v.number(),
+  }).index('by_ownerId', ['ownerId']).index('by_code', ['code']),
+  pollParticipants: defineTable({ pollId: v.id('polls'), token: v.string() })
+    .index('by_pollId_and_token', ['pollId', 'token']),
+  pollResponses: defineTable({
+    pollId: v.id('polls'), participantId: v.id('pollParticipants'), question: v.number(),
+    choice: v.optional(v.number()), text: v.optional(v.string()), hidden: v.boolean(),
+  }).index('by_pollId_and_question', ['pollId', 'question'])
+    .index('by_participantId_and_question', ['participantId', 'question']),
   basketballPracticeRuns: defineTable({ ownerId: v.id('users'), runId: v.string() })
     .index('by_ownerId_and_runId', ['ownerId', 'runId']),
   basketballRuns: defineTable({

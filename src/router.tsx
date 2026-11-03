@@ -6,11 +6,15 @@ export const router = createBrowserRouter([{ element: <RootLayout />, errorEleme
   { path: 'sign-in', element: <SignIn /> },
   { lazy: async () => ({ Component: (await import('./pages/public-apps')).PublicAppsLayout }), children: [
     { path: 'games', lazy: async () => ({ Component: (await import('./pages/games')).GamesPage }) },
+    { path: 'join/:code?', lazy: async () => ({ Component: (await import('./pages/join-poll')).JoinPollPage }) },
     { path: 'public-apps', lazy: async () => ({ Component: (await import('./pages/public-apps')).PublicAppsPage }) },
     { path: 'basketball', lazy: async () => ({ Component: (await import('./pages/basketball')).BasketballPage }) },
   ] },
   { element: <ProtectedLayout />, children: [
     { path: 'apps', element: <Dashboard /> },
+    { path: 'polls', lazy: async () => ({ Component: (await import('./pages/polls')).PollsPage }) },
+    { path: 'polls/new', lazy: async () => ({ Component: (await import('./pages/polls')).NewPollPage }) },
+    { path: 'polls/:id', lazy: async () => ({ Component: (await import('./pages/polls')).PollHostPage }) },
     { path: 'log', lazy: async () => ({ Component: (await import('./pages/log-layout')).LogLayout }), children: [
       { index: true, lazy: async () => ({ Component: (await import('./pages/log')).LogPage }) },
       { path: 'data', lazy: async () => ({ Component: (await import('./pages/data')).DataPage }) },

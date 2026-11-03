@@ -15,6 +15,7 @@ import type * as credentials from "../credentials.js";
 import type * as http from "../http.js";
 import type * as lib_access from "../lib/access.js";
 import type * as logbook from "../logbook.js";
+import type * as polls from "../polls.js";
 import type * as reviews from "../reviews.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/access": typeof lib_access;
   logbook: typeof logbook;
+  polls: typeof polls;
   reviews: typeof reviews;
 }>;
 

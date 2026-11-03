@@ -1,0 +1,49 @@
+import { useState } from 'react'
+import { Download, Eye, EyeOff } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
+import type { FunctionReturnType } from 'convex/server'
+import { toast } from 'sonner'
+import { api } from '@/lib/backend'
+import { message } from '@/lib/format'
+import { wordCounts } from '@/lib/poll-words'
+import { Button } from '@/components/ui/button'
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+export function PollSelect({ label, value, options, onChange }: { label: string, value: string, options: { value: string, label: string }[], onChange: (value: string) => void }) {
+  return <Select value={value} onValueChange={value => { if (value !== null) onChange(value) }} items={options}><SelectTrigger aria-label={label} className="h-11 w-full min-w-0"><SelectValue /></SelectTrigger><SelectContent>{options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select>
+}
+type Question = { prompt: string, kind: 'choice' | 'text', options: string[] }
+type Result = NonNullable<FunctionReturnType<typeof api.polls.resultsForQuestion>>
+const wordColors = ['text-blue-700 dark:text-blue-300', 'text-amber-700 dark:text-amber-300', 'text-emerald-700 dark:text-emerald-300', 'text-violet-700 dark:text-violet-300', 'text-pink-700 dark:text-pink-300', 'text-cyan-700 dark:text-cyan-300']
+const colors = ['#4f7df3', '#f59e0b', '#10b981', '#a78bfa', '#f472b6', '#22d3ee', '#fb923c', '#84cc16', '#c084fc', '#f87171', '#2dd4bf', '#e879f9']
+function downloadCsv(question: Question, results: Result) {
+  const cells = question.kind === 'choice' ? [['Option', 'Responses'], ...question.options.map((o, i) => [o, String(results.counts[i])])] : [['Answer', 'Responses'], ...results.texts.map(t => [t.text, String(t.count)])]
+  const escape = (value: string) => `"${(/^[\s]*[=+\-@]|^[\t\r\n]/.test(value) ? "'" : '') + value.replaceAll('"', '""')}"`
+  const csv = [['Question', question.prompt], ...cells].map(row => row.map(escape).join(',')).join('\r\n')
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a'); a.href = url; a.download = 'blue-poll-results.csv'; a.click(); URL.revokeObjectURL(url)
+}
+export function PollResults({ code, index, question, admin = false }: { code: string, index: number, question: Question, admin?: boolean }) {
+  const results = useQuery(api.polls.resultsForQuestion, { code, question: index })
+  const moderate = useMutation(api.polls.moderate)
+  const [format, setFormat] = useState('bar')
+  const [pending, setPending] = useState(false)
+  const formats = question.kind === 'choice' ? [{ value: 'bar', label: 'Bar graph' }, { value: 'pie', label: 'Pie chart' }, { value: 'donut', label: 'Donut chart' }, { value: 'table', label: 'Data table' }] : [{ value: 'cloud', label: 'Word cloud' }, { value: 'answers', label: 'Answer cards' }, { value: 'table', label: 'Data table' }]
+  const view = formats.some(f => f.value === format) ? format : formats[0].value
+  if (results === undefined) return <p role="status" className="text-sm text-muted-foreground">Loading live results…</p>
+  if (!results) return <div className="rounded-2xl border border-dashed p-8 text-center"><EyeOff className="mx-auto mb-3 text-muted-foreground" /><p className="font-medium">Results are hidden</p><p className="mt-2 text-sm text-muted-foreground">They’ll appear here live when the host reveals them.</p></div>
+  const words = wordCounts(results.texts), maxWord = words[0]?.count ?? 1
+  const gradient = results.counts.map((count, i) => { const start = results.counts.slice(0, i).reduce((sum, n) => sum + n, 0); return `${colors[i]} ${start / results.total * 100}% ${(start + count) / results.total * 100}%` }).join(', ')
+  return <section className="space-y-5" aria-label="Live results">
+    <div className="flex flex-wrap items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-sm"><span className="size-2 rounded-full bg-emerald-500" />{results.total} {results.total === 1 ? 'response' : 'responses'} · Live</span><div className="flex w-full gap-2 sm:w-auto"><div className="min-w-0 flex-1 sm:w-44"><PollSelect label="Results format" value={view} options={formats} onChange={setFormat} /></div>{admin && <Button variant="outline" className="h-11" onClick={() => downloadCsv(question, results)}><Download size={16} />CSV</Button>}</div></div>
+    {!results.total ? <div className="rounded-2xl bg-muted/40 px-6 py-14 text-center text-sm text-muted-foreground">Waiting for the first answer. This view updates automatically.</div> : <>
+      {question.kind === 'choice' && view === 'bar' && <div role="img" aria-label={`Bar graph: ${question.options.map((o, i) => `${o}: ${results.counts[i]}`).join('; ')}`} className="space-y-5 py-3">{question.options.map((option, i) => <div key={i}><div className="mb-2 flex justify-between gap-3 text-sm"><span className="break-words">{option}{results.correctIndex === i && <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">✓ Correct</span>}</span><strong className="shrink-0">{results.counts[i]} <span className="font-normal text-muted-foreground">({Math.round(results.counts[i] / results.total * 100)}%)</span></strong></div><div className="h-8 overflow-hidden rounded-lg bg-muted"><div className="h-full rounded-lg transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${results.counts[i] / results.total * 100}%`, background: colors[i] }} /></div></div>)}</div>}
+      {question.kind === 'choice' && (view === 'pie' || view === 'donut') && <div className="flex flex-col items-center gap-7 py-4 sm:flex-row"><div role="img" aria-label={`${view} chart: ${question.options.map((o, i) => `${o}: ${results.counts[i]}`).join('; ')}`} className="relative size-52 shrink-0 rounded-full" style={{ background: `conic-gradient(${gradient})` }}>{view === 'donut' && <div className="absolute inset-10 grid place-content-center rounded-full bg-card text-center"><strong className="text-3xl">{results.total}</strong><span className="text-xs text-muted-foreground">responses</span></div>}</div><ul className="w-full space-y-3 text-sm">{question.options.map((option, i) => <li key={i} className="flex items-center gap-2"><span className="size-3 shrink-0 rounded-sm" style={{ background: colors[i] }} /><span className="min-w-0 flex-1 break-words">{option}</span><strong>{results.counts[i]}</strong><span className="text-xs text-muted-foreground">{Math.round(results.counts[i] / results.total * 100)}%</span></li>)}</ul></div>}
+      {question.kind === 'text' && view === 'cloud' && <><div className="flex min-h-64 flex-wrap items-center justify-center gap-x-5 gap-y-3 rounded-2xl bg-muted/30 p-5" aria-label="Word cloud">{words.slice(0, 60).map(({ word, count }, i) => <span key={word} title={`${word}: ${count}`} className={`max-w-full break-all font-semibold leading-tight ${wordColors[i % wordColors.length]}`} style={{ fontSize: `${16 + Math.sqrt(count / maxWord) * 32}px` }}>{word}<span className="sr-only"> ({count})</span></span>)}{!words.length && <p className="text-sm text-muted-foreground">No words to display after removing common words.</p>}</div><p className="text-xs text-muted-foreground">Larger words appeared more often. Common words are omitted; the top 60 are shown.</p></>}
+      {question.kind === 'text' && view === 'answers' && <div className="grid max-h-96 gap-3 overflow-y-auto sm:grid-cols-2">{results.texts.map((t, i) => <div key={i} className="rounded-xl border bg-muted/20 p-4"><p className="whitespace-pre-wrap break-words text-sm">{t.text}</p><span className="mt-2 block text-xs text-muted-foreground">{t.count} {t.count === 1 ? 'response' : 'responses'}</span></div>)}</div>}
+      {view === 'table' && <div className="max-h-96 overflow-auto rounded-xl border"><Table className="w-full text-left text-sm"><TableCaption className="sr-only">Response data for {question.prompt}</TableCaption><TableHeader className="sticky top-0 bg-muted"><TableRow><TableHead className="p-3">{question.kind === 'choice' ? 'Option' : 'Answer'}</TableHead><TableHead className="p-3 text-right">Responses</TableHead></TableRow></TableHeader><TableBody>{(question.kind === 'choice' ? question.options.map((text, i) => ({ text, count: results.counts[i] })) : results.texts).map((row, i) => <TableRow key={i} className="border-t"><TableCell className="max-w-72 whitespace-normal break-words p-3">{row.text}</TableCell><TableCell className="p-3 text-right tabular-nums">{row.count}</TableCell></TableRow>)}</TableBody></Table></div>}
+    </>}
+    {admin && results.responses.length > 0 && <details className="rounded-xl border p-4"><summary className="cursor-pointer text-sm font-medium">Moderate open-ended answers ({results.responses.length})</summary><p className="mt-2 text-xs text-muted-foreground">Hidden answers are excluded from public charts, word clouds, and exports.</p><div className="mt-4 max-h-80 space-y-2 overflow-y-auto">{results.responses.map(row => <div key={row.id} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3"><p className={`min-w-0 flex-1 break-words text-sm ${row.hidden ? 'text-muted-foreground line-through' : ''}`}>{row.text}</p><Button variant="outline" size="icon" aria-label={`${row.hidden ? 'Restore' : 'Hide'} answer: ${row.text}`} disabled={pending} onClick={async () => { setPending(true); try { await moderate({ id: row.id, hidden: !row.hidden }) } catch (e) { toast.error(message(e)) } finally { setPending(false) } }}>{row.hidden ? <Eye size={15} /> : <EyeOff size={15} />}</Button></div>)}</div></details>}
+  </section>
+}

@@ -101,3 +101,17 @@ Open Public apps at `/public-apps`, then play Flick Basketball at `/basketball`.
 - Guest runs remain temporary and can be replayed immediately. Signed-in completed runs are saved privately in Convex, with best score and the most recent score. Game physics and in-progress state are ephemeral client state. These are personal client-reported scores, not a competitive/verified leaderboard.
 - Physics and scoring use fixed time steps. Timer expiration ends the run immediately; shots crossing after the buzzer do not score. Finish this run on the pause screen ends and saves early.
 - Tests cover actual shot simulation, moving-hoop crossing, misses, bonus thresholds, streak rewards, timer/pause/buzzer, haptic patterns, private score storage, and browser play-through.
+
+## Polls & quizzes
+
+Admins open `/polls` from the dashboard to create a draft with 1–20 questions. Each question is multiple choice (2–12 options) or open ended (up to 300 characters). Selecting a correct choice enables quiz grading for that question. Drafts can be edited; questions lock on publication to preserve response meaning.
+
+Publishing activates a random eight-character code and a QR pointing directly to `/join/CODE`. `/join` is listed in Public apps and accepts codes without an account. Guest session capabilities are generated with browser crypto and stored locally per poll; only the token is stored, never a copy of Convex response data. A session submits each question once, retries are idempotent, and returning with the token restores progress. Clearing browser storage creates a new session, so this is not identity-verified voting.
+
+Hosts can close/reopen voting, reveal/hide participant results, hide their local presentation view separately, and present without the workspace chrome. Result hiding is enforced in Convex: public aggregate queries return null and quiz scores are withheld. Public question data never includes answer keys, owner IDs, or participant tokens. Owning admins can inspect results privately while participant results stay hidden.
+
+Multiple-choice results support live bar, pie, donut, and table views. Open-ended results support a frequency-based word cloud (top 60 words, common English words omitted), answer cards, and a table. CSV exports cover the selected question. Open-ended answers can be hidden/restored by the owning admin; hidden text is excluded from public results and exports.
+
+Each session supports 1,000 participants, with a per-session join token bucket of 120 per minute. All response reads are indexed and bounded to that session limit. The host list shows the newest 100 sessions. Anonymous participation is an intentional public data exception; private logs and account data stay protected. Poll content and responses persist in Convex, while editor drafts and presentation controls are temporary client state.
+
+The public header has light/dark/system theme controls. The homepage, reason cards, review form and review cards follow the same next-themes preference as Settings.

@@ -1,0 +1,105 @@
+/// <reference types="vite/client" />
+import { it, expect } from 'vitest'
+import { convexTest } from 'convex-test'
+import rateLimiter from '@convex-dev/rate-limiter/test'
+import schema from './schema'
+import { api } from './_generated/api'
+const modules = import.meta.glob(['./**/*.ts', '!./**/*.test.ts'])
+async function fixture() {
+  const t = convexTest(schema, modules)
+  rateLimiter.register(t)
+  const users = await t.run(async ctx => ({ admin: await ctx.db.insert('users', { username: 'Host', role: 'admin' }), other: await ctx.db.insert('users', { username: 'Other', role: 'admin' }), member: await ctx.db.insert('users', { username: 'Member', role: 'member' }) }))
+  const admin = t.withIdentity({ subject: `${users.admin}|session` }), other = t.withIdentity({ subject: `${users.other}|session` }), member = t.withIdentity({ subject: `${users.member}|session` })
+  const questions = [{ prompt: 'Best color?', kind: 'choice' as const, options: ['Blue', 'Red'], correctIndex: 0 }, { prompt: 'Describe today.', kind: 'text' as const, options: [] }]
+  const args = { title: 'Live session', description: 'A test', questions }
+  const id = await admin.mutation(api.polls.create, args)
+  const poll = await admin.query(api.polls.get, { id })
+  return { t, admin, other, member, args, id, code: poll.code }
+}
+it('restricts creation, hosting, editing, and results to the owning admin', async () => {
+  const { t, admin, other, member, args, id, code } = await fixture()
+  await expect(t.mutation(api.polls.create, args)).rejects.toThrow(/Not authorized/)
+  await expect(member.mutation(api.polls.create, args)).rejects.toThrow(/Admin/)
+  await expect(other.query(api.polls.get, { id })).rejects.toThrow(/not authorized/)
+  await expect(other.mutation(api.polls.control, { id, status: 'open' })).rejects.toThrow(/not authorized/)
+  await expect(other.mutation(api.polls.edit, { id, ...args })).rejects.toThrow(/not authorized/)
+  expect(await other.query(api.polls.list, {})).toEqual([])
+  expect(await t.query(api.polls.lookup, { code })).toBeNull()
+  expect(await t.query(api.polls.resultsForQuestion, { code, question: 0 })).toBeNull()
+  expect(await other.query(api.polls.resultsForQuestion, { code, question: 0 })).toBeNull()
+  expect(await admin.query(api.polls.resultsForQuestion, { code, question: 0 })).toMatchObject({ total: 0 })
+})
+it('publishes random codes, accepts guest answers, and never leaks hidden answers or quiz keys', async () => {
+  const { t, admin, id, code } = await fixture()
+  expect(code).toMatch(/^[A-Z2-9]{8}$/)
+  const token = crypto.randomUUID()
+  await expect(t.mutation(api.polls.join, { code, token })).rejects.toThrow(/published/)
+  await admin.mutation(api.polls.control, { id, status: 'open' })
+  const publicPoll = await t.query(api.polls.lookup, { code: code.toLowerCase() })
+  expect(publicPoll?.questions[0]).toEqual({ prompt: 'Best color?', kind: 'choice', options: ['Blue', 'Red'] })
+  await t.mutation(api.polls.join, { code, token })
+  await t.mutation(api.polls.join, { code, token })
+  expect((await admin.query(api.polls.get, { id })).participantCount).toBe(1)
+  const response = { code, token, question: 0, choice: 0 }
+  await t.mutation(api.polls.respond, response)
+  await t.mutation(api.polls.respond, response)
+  await expect(t.mutation(api.polls.respond, { ...response, choice: 1 })).rejects.toThrow(/already/)
+  expect(await t.query(api.polls.resultsForQuestion, { code, question: 0 })).toBeNull()
+  expect(await t.query(api.polls.myAnswers, { code, token })).toMatchObject({ correct: null, answers: [{ question: 0, choice: 0 }] })
+  expect(await t.query(api.polls.myAnswers, { code, token: crypto.randomUUID() })).toBeNull()
+  expect(await admin.query(api.polls.resultsForQuestion, { code, question: 0 })).toMatchObject({ total: 1, counts: [1, 0] })
+  await admin.mutation(api.polls.control, { id, resultsVisible: true })
+  expect(await t.query(api.polls.resultsForQuestion, { code, question: 0 })).toMatchObject({ total: 1, counts: [1, 0], correctIndex: 0, responses: [] })
+  expect(await t.query(api.polls.myAnswers, { code, token })).toMatchObject({ correct: 1, quizTotal: 1 })
+  await admin.mutation(api.polls.control, { id, resultsVisible: false })
+  expect(await t.query(api.polls.resultsForQuestion, { code, question: 0 })).toBeNull()
+  expect(await t.query(api.polls.myAnswers, { code, token })).toMatchObject({ correct: null })
+})
+it('rejects malformed answers, anonymous impersonation, and votes on closed polls', async () => {
+  const { t, admin, id, code, args } = await fixture()
+  await admin.mutation(api.polls.control, { id, status: 'open' })
+  const token = crypto.randomUUID()
+  await expect(t.mutation(api.polls.respond, { code, token, question: 0, choice: 0 })).rejects.toThrow(/Join/)
+  await expect(t.mutation(api.polls.join, { code, token: 'guess' })).rejects.toThrow(/reload/)
+  await t.mutation(api.polls.join, { code, token })
+  for (const bad of [{ question: 0, choice: 100 }, { question: -1, choice: 0 }, { question: .5, choice: 0 }, { question: 1, text: ' ' }, { question: 1, text: 'x'.repeat(301) }]) await expect(t.mutation(api.polls.respond, { code, token, ...bad })).rejects.toThrow()
+  await expect(admin.mutation(api.polls.edit, { id, ...args })).rejects.toThrow(/locked/)
+  await admin.mutation(api.polls.control, { id, status: 'closed' })
+  await expect(t.mutation(api.polls.respond, { code, token, question: 0, choice: 0 })).rejects.toThrow(/not accepting/)
+  await expect(t.mutation(api.polls.join, { code, token: crypto.randomUUID() })).rejects.toThrow(/closed/)
+  await expect(admin.mutation(api.polls.control, { id, status: 'draft' })).rejects.toThrow(/cannot/)
+  await admin.mutation(api.polls.control, { id, status: 'open' })
+  await t.mutation(api.polls.respond, { code, token, question: 0, choice: 1 })
+})
+it('moderates open-ended answers and removes them from public result formats', async () => {
+  const { t, admin, other, id, code } = await fixture()
+  await admin.mutation(api.polls.control, { id, status: 'open', resultsVisible: true })
+  for (let i = 0; i < 2; i++) { const token = crypto.randomUUID(); await t.mutation(api.polls.join, { code, token }); await t.mutation(api.polls.respond, { code, token, question: 1, text: 'Blue skies' }) }
+  const host = (await admin.query(api.polls.resultsForQuestion, { code, question: 1 }))!
+  expect(host.texts).toEqual([{ text: 'Blue skies', count: 2 }])
+  await expect(t.mutation(api.polls.moderate, { id: host.responses[0].id, hidden: true })).rejects.toThrow(/Not authorized/)
+  await expect(other.mutation(api.polls.moderate, { id: host.responses[0].id, hidden: true })).rejects.toThrow(/not authorized/)
+  await admin.mutation(api.polls.moderate, { id: host.responses[0].id, hidden: true })
+  expect(await t.query(api.polls.resultsForQuestion, { code, question: 1 })).toMatchObject({ total: 1, texts: [{ text: 'Blue skies', count: 1 }], responses: [] })
+  await admin.mutation(api.polls.moderate, { id: host.responses[0].id, hidden: false })
+  expect(await t.query(api.polls.resultsForQuestion, { code, question: 1 })).toMatchObject({ total: 2 })
+})
+it('validates drafts, prevents answer-key leakage before publication, and bounds session size', async () => {
+  const { t, admin, args, id, code } = await fixture()
+  await expect(admin.mutation(api.polls.create, { ...args, title: '' })).rejects.toThrow()
+  await expect(admin.mutation(api.polls.create, { ...args, questions: [] })).rejects.toThrow()
+  await expect(admin.mutation(api.polls.create, { ...args, questions: [{ prompt: 'Q', kind: 'choice', options: ['Same', 'same'] }] })).rejects.toThrow()
+  await expect(admin.mutation(api.polls.control, { id, resultsVisible: true })).rejects.toThrow(/Publish/)
+  await admin.mutation(api.polls.edit, { id, ...args, title: 'Updated' })
+  expect((await admin.query(api.polls.get, { id })).title).toBe('Updated')
+  await admin.mutation(api.polls.control, { id, status: 'open' })
+  await t.run(ctx => ctx.db.patch(id, { participantCount: 1000 }))
+  await expect(t.mutation(api.polls.join, { code, token: crypto.randomUUID() })).rejects.toThrow(/limit/)
+})
+it('rate-limits anonymous joins across different browser tokens', async () => {
+  const { t, admin, id, code } = await fixture()
+  await admin.mutation(api.polls.control, { id, status: 'open' })
+  for (let i = 0; i < 120; i++) await t.mutation(api.polls.join, { code, token: crypto.randomUUID() })
+  await expect(t.mutation(api.polls.join, { code, token: crypto.randomUUID() })).rejects.toThrow(/Lots of people/)
+  expect((await admin.query(api.polls.get, { id })).participantCount).toBe(120)
+})
